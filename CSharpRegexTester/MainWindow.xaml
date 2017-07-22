@@ -5,9 +5,18 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:CSharpRegexTester"
         mc:Ignorable="d"
-        Title="MainWindow" Height="350" Width="525">
+        Title="MainWindow" Height="640" Width="1000">
     <Grid>
-        <TextBox HorizontalAlignment="Left" Height="35" Margin="53,30,0,0" TextWrapping="Wrap" Text="Regex Expression" VerticalAlignment="Top" Width="438"/>
+        <TextBox x:Name="ExpressionTextBox" HorizontalAlignment="Left" Height="60" Margin="110,56,0,0" TextWrapping="Wrap" Text="Regex Expression" VerticalAlignment="Top" Width="500"/>
+        <Button x:Name="CaretButton" Content="^" HorizontalAlignment="Left" Height="20" Margin="112,31,0,0" VerticalAlignment="Top" Width="18"/>
+        <Button x:Name="WordCharacterButton" Content="\w" HorizontalAlignment="Left" Height="20" Margin="158,31,0,0" VerticalAlignment="Top" Width="21"/>
+        <Button x:Name="NonWordCharacterButton" Content="\W" HorizontalAlignment="Left" Height="20" Margin="184,31,0,0" VerticalAlignment="Top" Width="21"/>
+        <Button x:Name="DigitButton" Content="\d" HorizontalAlignment="Left" Height="20" Margin="210,31,0,0" VerticalAlignment="Top" Width="21"/>
+        <TreeView x:Name="MatchesTreeView" HorizontalAlignment="Left" Height="400" Margin="432,160,0,0" VerticalAlignment="Top" Width="550"/>
+        <TextBox x:Name="DataTextBox" HorizontalAlignment="Left" Height="170" Margin="22,160,0,0" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="400"/>
+        <TextBox x:Name="ReplacementTextTextBox" HorizontalAlignment="Left" Height="50" Margin="22,335,0,0" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="400"/>
+        <TextBox x:Name="ReplacementResultsTextBox" HorizontalAlignment="Left" Height="65" Margin="22,390,0,0" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="400"/>
+        <TextBox x:Name="ReplaceDelegateTextBox" HorizontalAlignment="Left" Height="70" Margin="22,460,0,0" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="400"/>
 
     </Grid>
 </Window>
