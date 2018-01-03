@@ -7,16 +7,20 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="640" Width="1000">
     <Grid>
-        <TextBox x:Name="ExpressionTextBox" HorizontalAlignment="Left" Height="60" Margin="110,56,0,0" TextWrapping="Wrap" Text="Regex Expression" VerticalAlignment="Top" Width="500"/>
-        <Button x:Name="CaretButton" Content="^" HorizontalAlignment="Left" Height="20" Margin="112,31,0,0" VerticalAlignment="Top" Width="18"/>
-        <Button x:Name="WordCharacterButton" Content="\w" HorizontalAlignment="Left" Height="20" Margin="158,31,0,0" VerticalAlignment="Top" Width="21"/>
-        <Button x:Name="NonWordCharacterButton" Content="\W" HorizontalAlignment="Left" Height="20" Margin="184,31,0,0" VerticalAlignment="Top" Width="21"/>
-        <Button x:Name="DigitButton" Content="\d" HorizontalAlignment="Left" Height="20" Margin="210,31,0,0" VerticalAlignment="Top" Width="21"/>
+        <TextBox x:Name="ExpressionTextBox" HorizontalAlignment="Left" Height="60" Margin="22,56,0,0" TextWrapping="Wrap" Text="Regex Expression" VerticalAlignment="Top" Width="500"/>
+        <Button x:Name="CaretButton" Content="^" HorizontalAlignment="Left" Height="23" Margin="24,31,0,0" VerticalAlignment="Top" Width="19" HorizontalContentAlignment="Center"/>
+        <Button x:Name="WordCharacterButton" Content="\w" HorizontalAlignment="Left" Height="23" Margin="60,31,0,0" VerticalAlignment="Top" Width="19"/>
+        <Button x:Name="NonWordCharacterButton" Content="\W" HorizontalAlignment="Left" Height="23" Margin="84,31,0,0" VerticalAlignment="Top" Width="19"/>
+        <Button x:Name="DigitButton" Content="\d" HorizontalAlignment="Left" Height="23" Margin="108,31,0,0" VerticalAlignment="Top" Width="19"/>
         <TreeView x:Name="MatchesTreeView" HorizontalAlignment="Left" Height="400" Margin="432,160,0,0" VerticalAlignment="Top" Width="550"/>
         <TextBox x:Name="DataTextBox" HorizontalAlignment="Left" Height="170" Margin="22,160,0,0" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="400"/>
         <TextBox x:Name="ReplacementTextTextBox" HorizontalAlignment="Left" Height="50" Margin="22,335,0,0" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="400"/>
         <TextBox x:Name="ReplacementResultsTextBox" HorizontalAlignment="Left" Height="65" Margin="22,390,0,0" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="400"/>
         <TextBox x:Name="ReplaceDelegateTextBox" HorizontalAlignment="Left" Height="70" Margin="22,460,0,0" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="400"/>
+        <Button x:Name="PeriodButton" Content="." HorizontalAlignment="Left" Height="23" Margin="145,31,0,0" VerticalAlignment="Top" Width="19" VerticalContentAlignment="Center"/>
+        <Button x:Name="PlusSignButton" Content="+" HorizontalAlignment="Left" Height="23" Margin="169,31,0,0" VerticalAlignment="Top" Width="19"/>
+        <Button x:Name="AsteriskButton" Content="*" HorizontalAlignment="Left" Height="23" Margin="193,31,0,0" VerticalAlignment="Top" Width="19" RenderTransformOrigin="2.19,0.55"/>
+        <Button x:Name="DollarSignButton" Content="$" HorizontalAlignment="Left" Height="23" Margin="238,31,0,0" VerticalAlignment="Top" Width="19" RenderTransformOrigin="2.19,0.55"/>
 
     </Grid>
 </Window>
