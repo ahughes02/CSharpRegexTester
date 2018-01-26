@@ -235,14 +235,6 @@ namespace CSharpRegexTester
             }
         }
 
-        private void ExpressionTextBox_GotFocus(object sender, RoutedEventArgs e)
-        {
-            if (IsLoaded && ExpressionTextBox.Text == "Expression")
-            {
-                ExpressionTextBox.Text = "";
-            }
-        }
-
         private void TextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (regexWorker.IsBusy)
@@ -273,6 +265,14 @@ namespace CSharpRegexTester
             IgnoreCaseCheckBox.IsChecked = false;
             MatchesTreeView.Items.Clear();
             stopWork = false;
+        }
+
+        private void RegexCharacterButton_Click(object sender, RoutedEventArgs e)
+        {
+            var source = (Button)e.Source;
+            var content = (String)source.Content;
+
+            ExpressionTextBox.Text += content;
         }
     }
 }
