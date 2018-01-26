@@ -15,7 +15,7 @@
         <Button x:Name="PlusSignButton" Content="+" HorizontalAlignment="Left" Height="23" Margin="169,31,0,0" VerticalAlignment="Top" Width="19"/>
         <Button x:Name="AsteriskButton" Content="*" HorizontalAlignment="Left" Height="23" Margin="193,31,0,0" VerticalAlignment="Top" Width="19" RenderTransformOrigin="2.19,0.55"/>
         <Button x:Name="DollarSignButton" Content="$" HorizontalAlignment="Left" Height="23" Margin="238,31,0,0" VerticalAlignment="Top" Width="19" RenderTransformOrigin="2.19,0.55"/>
-        <Button x:Name="ClearAllButton" Content="Clear All" HorizontalAlignment="Left" Height="23" Margin="461,31,0,0" VerticalAlignment="Top" Width="60" RenderTransformOrigin="2.19,0.55"/>
+        <Button x:Name="ClearAllButton" Content="Clear All" HorizontalAlignment="Left" Height="23" Margin="461,31,0,0" VerticalAlignment="Top" Width="60" RenderTransformOrigin="2.19,0.55" Click="ClearAllButton_Click"/>
         <CheckBox x:Name="IgnoreCaseCheckBox" Content="IgnoreCase" HorizontalAlignment="Left" Margin="545,56,0,0" VerticalAlignment="Top"/>
         <CheckBox x:Name="SinglelineCheckBox" Content="Singleline" HorizontalAlignment="Left" Margin="545,76,0,0" VerticalAlignment="Top"/>
         <CheckBox x:Name="MultilineCheckBox" Content="Multiline" HorizontalAlignment="Left" Margin="545,96,0,0" VerticalAlignment="Top"/>
@@ -25,8 +25,8 @@
         <CheckBox x:Name="CultureInvariantCheckBox" Content="CultureInvariant" HorizontalAlignment="Left" Margin="647,96,0,0" VerticalAlignment="Top"/>
         <CheckBox x:Name="CompiledCheckBox" Content="Compiled" HorizontalAlignment="Left" Margin="759,76,0,0" VerticalAlignment="Top" Grid.ColumnSpan="2"/>
         <CheckBox x:Name="IgnorePatternWhitespace" Content="IgnorePatternWhitespace" HorizontalAlignment="Left" Margin="759,96,0,0" VerticalAlignment="Top" Grid.ColumnSpan="3"/>
-        <CheckBox x:Name="ExpandCapturesCheckBox" Content="Expand Captures" HorizontalAlignment="Left" Margin="537,140,0,0" VerticalAlignment="Top"/>
-        <CheckBox x:Name="ExpandGroupsCheckBox" Content="Expand Groups" HorizontalAlignment="Left" Margin="668,140,0,0" VerticalAlignment="Top"/>
+        <CheckBox x:Name="ExpandCapturesCheckBox" Content="Expand Captures" HorizontalAlignment="Left" Margin="537,140,0,0" VerticalAlignment="Top" Checked="ExpandCapturesCheckBox_Checked" Unchecked="ExpandCapturesCheckBox_Unchecked"/>
+        <CheckBox x:Name="ExpandGroupsCheckBox" Content="Expand Groups" HorizontalAlignment="Left" Margin="668,140,0,0" VerticalAlignment="Top" Checked="ExpandGroupsCheckBox_Checked" Unchecked="ExpandGroupsCheckBox_Unchecked"/>
         <Label x:Name="MatchResultsLabel" Content="Match Results&#xD;&#xA;" HorizontalAlignment="Left" Margin="432,134,0,0" VerticalAlignment="Top" FontWeight="Bold"/>
         <Label x:Name="TestDataLabel" Content="Test Data&#xA;" HorizontalAlignment="Left" Margin="22,134,0,0" VerticalAlignment="Top" FontWeight="Bold"/>
         <Label x:Name="ReplacementTextLabel" Content="Replacement Text&#xA;" HorizontalAlignment="Left" Margin="24,330,0,0" VerticalAlignment="Top" FontWeight="Bold"/>
