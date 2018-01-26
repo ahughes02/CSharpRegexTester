@@ -6,21 +6,36 @@
         xmlns:local="clr-namespace:CSharpRegexTester"
         mc:Ignorable="d"
         Title="MainWindow" Height="640" Width="1000">
-    <Grid>
-        <TextBox x:Name="ExpressionTextBox" HorizontalAlignment="Left" Height="60" Margin="22,56,0,0" TextWrapping="Wrap" Text="Regex Expression" VerticalAlignment="Top" Width="500"/>
+    <Grid Margin="0,0,2,0">
         <Button x:Name="CaretButton" Content="^" HorizontalAlignment="Left" Height="23" Margin="24,31,0,0" VerticalAlignment="Top" Width="19" HorizontalContentAlignment="Center"/>
         <Button x:Name="WordCharacterButton" Content="\w" HorizontalAlignment="Left" Height="23" Margin="60,31,0,0" VerticalAlignment="Top" Width="19"/>
         <Button x:Name="NonWordCharacterButton" Content="\W" HorizontalAlignment="Left" Height="23" Margin="84,31,0,0" VerticalAlignment="Top" Width="19"/>
         <Button x:Name="DigitButton" Content="\d" HorizontalAlignment="Left" Height="23" Margin="108,31,0,0" VerticalAlignment="Top" Width="19"/>
-        <TreeView x:Name="MatchesTreeView" HorizontalAlignment="Left" Height="400" Margin="432,160,0,0" VerticalAlignment="Top" Width="550"/>
-        <TextBox x:Name="DataTextBox" HorizontalAlignment="Left" Height="170" Margin="22,160,0,0" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="400"/>
-        <TextBox x:Name="ReplacementTextTextBox" HorizontalAlignment="Left" Height="50" Margin="22,335,0,0" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="400"/>
-        <TextBox x:Name="ReplacementResultsTextBox" HorizontalAlignment="Left" Height="65" Margin="22,390,0,0" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="400"/>
-        <TextBox x:Name="ReplaceDelegateTextBox" HorizontalAlignment="Left" Height="70" Margin="22,460,0,0" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="400"/>
         <Button x:Name="PeriodButton" Content="." HorizontalAlignment="Left" Height="23" Margin="145,31,0,0" VerticalAlignment="Top" Width="19" VerticalContentAlignment="Center"/>
         <Button x:Name="PlusSignButton" Content="+" HorizontalAlignment="Left" Height="23" Margin="169,31,0,0" VerticalAlignment="Top" Width="19"/>
         <Button x:Name="AsteriskButton" Content="*" HorizontalAlignment="Left" Height="23" Margin="193,31,0,0" VerticalAlignment="Top" Width="19" RenderTransformOrigin="2.19,0.55"/>
         <Button x:Name="DollarSignButton" Content="$" HorizontalAlignment="Left" Height="23" Margin="238,31,0,0" VerticalAlignment="Top" Width="19" RenderTransformOrigin="2.19,0.55"/>
-
+        <Button x:Name="ClearAllButton" Content="Clear All" HorizontalAlignment="Left" Height="23" Margin="461,31,0,0" VerticalAlignment="Top" Width="60" RenderTransformOrigin="2.19,0.55"/>
+        <CheckBox x:Name="IgnoreCaseCheckBox" Content="IgnoreCase" HorizontalAlignment="Left" Margin="545,56,0,0" VerticalAlignment="Top"/>
+        <CheckBox x:Name="SinglelineCheckBox" Content="Singleline" HorizontalAlignment="Left" Margin="545,76,0,0" VerticalAlignment="Top"/>
+        <CheckBox x:Name="MultilineCheckBox" Content="Multiline" HorizontalAlignment="Left" Margin="545,96,0,0" VerticalAlignment="Top"/>
+        <CheckBox x:Name="ExplicitCaptureCheckBox" Content="ExplicitCapture" HorizontalAlignment="Left" Margin="647,56,0,0" VerticalAlignment="Top"/>
+        <CheckBox x:Name="RightToLeftCheckBox" Content="RightToLeft" HorizontalAlignment="Left" Margin="759,56,0,0" VerticalAlignment="Top" Grid.ColumnSpan="2"/>
+        <CheckBox x:Name="ECMAScriptCheckBox" Content="ECMAScript" HorizontalAlignment="Left" Margin="647,76,0,0" VerticalAlignment="Top"/>
+        <CheckBox x:Name="CultureInvariantCheckBox" Content="CultureInvariant" HorizontalAlignment="Left" Margin="647,96,0,0" VerticalAlignment="Top"/>
+        <CheckBox x:Name="CompiledCheckBox" Content="Compiled" HorizontalAlignment="Left" Margin="759,76,0,0" VerticalAlignment="Top" Grid.ColumnSpan="2"/>
+        <CheckBox x:Name="IgnorePatternWhitespace" Content="IgnorePatternWhitespace" HorizontalAlignment="Left" Margin="759,96,0,0" VerticalAlignment="Top" Grid.ColumnSpan="3"/>
+        <CheckBox x:Name="ExpandCapturesCheckBox" Content="Expand Captures" HorizontalAlignment="Left" Margin="537,140,0,0" VerticalAlignment="Top"/>
+        <CheckBox x:Name="ExpandGroupsCheckBox" Content="Expand Groups" HorizontalAlignment="Left" Margin="668,140,0,0" VerticalAlignment="Top"/>
+        <Label x:Name="MatchResultsLabel" Content="Match Results&#xD;&#xA;" HorizontalAlignment="Left" Margin="432,134,0,0" VerticalAlignment="Top" FontWeight="Bold"/>
+        <Label x:Name="TestDataLabel" Content="Test Data&#xA;" HorizontalAlignment="Left" Margin="22,134,0,0" VerticalAlignment="Top" FontWeight="Bold"/>
+        <Label x:Name="ReplacementTextLabel" Content="Replacement Text&#xA;" HorizontalAlignment="Left" Margin="24,330,0,0" VerticalAlignment="Top" FontWeight="Bold"/>
+        <Label x:Name="ReplacementResultsLabel" Content="Replacement Results&#xA;" HorizontalAlignment="Left" Margin="22,407,0,0" VerticalAlignment="Top" FontWeight="Bold" Height="33"/>
+        <TextBox x:Name="ExpressionTextBox" Height="60" Margin="24,59,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="497" HorizontalAlignment="Left" Text="Expression" GotFocus="ExpressionTextBox_GotFocus" TextChanged="ExpressionTextBox_TextChanged"/>
+        <TextBox x:Name="DataTextBox" HorizontalAlignment="Left" Height="170" Margin="22,160,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="400"/>
+        <TextBox x:Name="ReplacementTextTextBox" HorizontalAlignment="Left" Height="50" Margin="22,354,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="400"/>
+        <TextBox x:Name="ReplacementResultsTextBox" Margin="24,429,0,49" TextWrapping="Wrap" HorizontalAlignment="Left" Width="400"/>
+        <TreeView x:Name="MatchesTreeView" Margin="438,160,10,49"/>
+        <Button x:Name="SaveAndExitButton" Content="Save and Exit" Height="23" Margin="0,0,10,10" Width="100" RenderTransformOrigin="2.19,0.55" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
     </Grid>
 </Window>
