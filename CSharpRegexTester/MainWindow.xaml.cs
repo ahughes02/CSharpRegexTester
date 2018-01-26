@@ -25,83 +25,19 @@ namespace CSharpRegexTester
         {
             try
             {
-                var argument = (Tuple<String, String, String, RegexOptions, bool, bool>)e.Argument;
+                var argument = (Tuple<String, String, String, RegexOptions>)e.Argument;
 
                 string replaceWith = String.IsNullOrEmpty(argument.Item3) ? "" : argument.Item3;
                 string replacementResults = argument.Item2;
-                TreeViewItem matchesTreeItem = null;
 
                 var regex = new Regex(argument.Item1, argument.Item4);
                 MatchCollection matches = regex.Matches(argument.Item2);
 
-                if (matches == null)
-                {
-                    return;
-                }
-
                 if (matches.Count > 0)
                 {
-                    matchesTreeItem = new TreeViewItem { Header = "Matches" };
-
-                    // Matches
-                    for (int i = 0; i < matches.Count; i++)
-                    {
-                        Match match = matches[i];
-
-                        TreeViewItem matchTreeItem = new TreeViewItem { Header = String.Format("[{0}] - {1}", i, match.Value) };
-                        matchesTreeItem.Items.Add(matchTreeItem);
-
-                        // Captures
-                        TreeViewItem capturesTreeItem = new TreeViewItem { Header = String.Format("Captures ({0})", match.Captures.Count) };
-                        matchTreeItem.Items.Add(capturesTreeItem);
-                        for (int j = 0; j < match.Captures.Count; j++)
-                        {
-                            Capture capture = match.Captures[j];
-                            TreeViewItem captureTreeItem = new TreeViewItem { Header = String.Format("[{0}] - [{1}] ({2} chars)", j, capture.Value, capture.Value.Length) };
-                            capturesTreeItem.Items.Add(captureTreeItem);
-                        }
-
-                        // Groups
-                        TreeViewItem groupsTreeItem = new TreeViewItem { Header = String.Format("Groups ({0})", match.Groups.Count) };
-                        matchTreeItem.Items.Add(groupsTreeItem);
-                        for (int j = 0; j < match.Groups.Count; j++)
-                        {
-                            Group group = match.Groups[j];
-                            var groupName = regex.GroupNameFromNumber(j);
-
-                            if (groupName != j.ToString())
-                            {
-                                groupName = String.Format("<{0}>", groupName);
-                            }
-                            else
-                            {
-                                groupName = String.Empty;
-                            }
-
-                            TreeViewItem groupTreeItem = new TreeViewItem { Header = String.Format("[{0}]{1} - [{2}] ({3} chars)", j, groupName, group.Value, group.Value.Length) };
-                            groupsTreeItem.Items.Add(groupTreeItem);
-                        }
-
-                        if (argument.Item5)
-                        {
-                            capturesTreeItem.IsExpanded = true;
-                        }
-                        if (argument.Item6)
-                        {
-                            groupsTreeItem.IsExpanded = true;
-                        }
-
-                        matchTreeItem.IsExpanded = true;
-
-                        i++;
-                    }
-
-                    matchesTreeItem.IsExpanded = true;
-
                     // Update Replace View
                     replacementResults = regex.Replace(replacementResults, replaceWith);
-
-                    e.Result = new Tuple<TreeViewItem, String>(matchesTreeItem, replacementResults);
+                    e.Result = new Tuple<Regex, MatchCollection, String>(regex, matches, replacementResults);
                 }
                 else
                 {
@@ -117,13 +53,13 @@ namespace CSharpRegexTester
 
         private void RegexWorkerWorkComplete(object sender, RunWorkerCompletedEventArgs e)
         {
-            Tuple<TreeViewItem, String> result = null;
+            Tuple<Regex, MatchCollection, String> result = null;
 
-            if(e.Result != null)
+            if (e.Result != null)
             {
                 try
                 {
-                    result = (Tuple<TreeViewItem, String>)e.Result;
+                    result = (Tuple<Regex, MatchCollection, String>)e.Result;
                 }
                 catch (Exception ex1)
                 {
@@ -159,15 +95,91 @@ namespace CSharpRegexTester
 
                 if (result != null)
                 {
-                    MatchesTreeView.Items.Clear();
-                    MatchesTreeView.Items.Add(result.Item1);
-                    ReplacementResultsTextBox.Text = result.Item2;
+
+                    Regex regex = result.Item1;
+                    MatchCollection matches = result.Item2;
+
+                    if (matches == null)
+                    {
+                        return;
+                    }
+
+                    TreeViewItem matchesTreeItem = null;
+
+                    if (matches.Count > 0)
+                    {
+                        matchesTreeItem = new TreeViewItem { Header = "Matches" };
+
+                        // Matches
+                        for (int i = 0; i < matches.Count; i++)
+                        {
+                            Match match = matches[i];
+
+                            TreeViewItem matchTreeItem = new TreeViewItem { Header = String.Format("[{0}] - {1}", i, match.Value) };
+                            matchesTreeItem.Items.Add(matchTreeItem);
+
+                            // Captures
+                            TreeViewItem capturesTreeItem = new TreeViewItem { Header = String.Format("Captures ({0})", match.Captures.Count) };
+                            matchTreeItem.Items.Add(capturesTreeItem);
+                            for (int j = 0; j < match.Captures.Count; j++)
+                            {
+                                Capture capture = match.Captures[j];
+                                TreeViewItem captureTreeItem = new TreeViewItem { Header = String.Format("[{0}] - [{1}] ({2} chars)", j, capture.Value, capture.Value.Length) };
+                                capturesTreeItem.Items.Add(captureTreeItem);
+                            }
+
+                            // Groups
+                            TreeViewItem groupsTreeItem = new TreeViewItem { Header = String.Format("Groups ({0})", match.Groups.Count) };
+                            matchTreeItem.Items.Add(groupsTreeItem);
+                            for (int j = 0; j < match.Groups.Count; j++)
+                            {
+                                Group group = match.Groups[j];
+                                var groupName = regex.GroupNameFromNumber(j);
+
+                                if (groupName != j.ToString())
+                                {
+                                    groupName = String.Format("<{0}>", groupName);
+                                }
+                                else
+                                {
+                                    groupName = String.Empty;
+                                }
+
+                                TreeViewItem groupTreeItem = new TreeViewItem { Header = String.Format("[{0}]{1} - [{2}] ({3} chars)", j, groupName, group.Value, group.Value.Length) };
+                                groupsTreeItem.Items.Add(groupTreeItem);
+                            }
+
+                            if (ExpandCapturesCheckBox.IsChecked.Value)
+                            {
+                                capturesTreeItem.IsExpanded = true;
+                            }
+                            if (ExpandGroupsCheckBox.IsChecked.Value)
+                            {
+                                groupsTreeItem.IsExpanded = true;
+                            }
+
+                            matchTreeItem.IsExpanded = true;
+                        }
+
+                        matchesTreeItem.IsExpanded = true;
+
+                        MatchesTreeView.Items.Clear();
+                        MatchesTreeView.Items.Add(matchesTreeItem);
+                        ReplacementResultsTextBox.Text = result.Item3;
+                    }
+                    else
+                    {
+                        MatchesTreeView.Items.Clear();
+                        MatchesTreeView.Items.Add("No Matches");
+                        ReplacementResultsTextBox.Text = "";
+                    }
                 }
             }
             else
             {
                 MatchesTreeView.Items.Clear();
                 MatchesTreeView.Items.Add("No Matches");
+                ReplacementResultsTextBox.Text = "";
             }
         }
 
@@ -208,7 +220,7 @@ namespace CSharpRegexTester
                 MatchesTreeView.Items.Clear();
                 MatchesTreeView.Items.Add("Working...");
 
-                regexWorker.RunWorkerAsync(new Tuple<String, String, String, RegexOptions, bool, bool>(ExpressionTextBox.Text, DataTextBox.Text, ReplacementTextTextBox.Text, options, ExpandCapturesCheckBox.IsChecked.Value, ExpandGroupsCheckBox.IsChecked.Value));
+                regexWorker.RunWorkerAsync(new Tuple<String, String, String, RegexOptions>(ExpressionTextBox.Text, DataTextBox.Text, ReplacementTextTextBox.Text, options));
             }
             catch (Exception e)
             {
@@ -231,7 +243,7 @@ namespace CSharpRegexTester
             }
         }
 
-        private void ExpressionTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        private void TextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (regexWorker.IsBusy)
             {
@@ -241,37 +253,7 @@ namespace CSharpRegexTester
             SetupAndRunRegexWorker();
         }
 
-        private void ExpandCapturesCheckBox_Checked(object sender, RoutedEventArgs e)
-        {
-            if (regexWorker.IsBusy)
-            {
-                regexWorker.CancelAsync();
-            }
-
-            SetupAndRunRegexWorker();
-        }
-
-        private void ExpandCapturesCheckBox_Unchecked(object sender, RoutedEventArgs e)
-        {
-            if (regexWorker.IsBusy)
-            {
-                regexWorker.CancelAsync();
-            }
-
-            SetupAndRunRegexWorker();
-        }
-
-        private void ExpandGroupsCheckBox_Checked(object sender, RoutedEventArgs e)
-        {
-            if (regexWorker.IsBusy)
-            {
-                regexWorker.CancelAsync();
-            }
-
-            SetupAndRunRegexWorker();
-        }
-
-        private void ExpandGroupsCheckBox_Unchecked(object sender, RoutedEventArgs e)
+        private void Checkbox_CheckChanged(object sender, EventArgs e)
         {
             if (regexWorker.IsBusy)
             {
