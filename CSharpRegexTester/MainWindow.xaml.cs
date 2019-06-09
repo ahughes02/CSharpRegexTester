@@ -25,9 +25,9 @@ namespace CSharpRegexTester
         {
             try
             {
-                var argument = (Tuple<String, String, String, RegexOptions>)e.Argument;
+                var argument = (Tuple<string, string, string, RegexOptions>)e.Argument;
 
-                string replaceWith = String.IsNullOrEmpty(argument.Item3) ? "" : argument.Item3;
+                string replaceWith = string.IsNullOrEmpty(argument.Item3) ? "" : argument.Item3;
                 string replacementResults = argument.Item2;
 
                 var regex = new Regex(argument.Item1, argument.Item4);
@@ -37,7 +37,7 @@ namespace CSharpRegexTester
                 {
                     // Update Replace View
                     replacementResults = regex.Replace(replacementResults, replaceWith);
-                    e.Result = new Tuple<Regex, MatchCollection, String>(regex, matches, replacementResults);
+                    e.Result = new Tuple<Regex, MatchCollection, string>(regex, matches, replacementResults);
                 }
                 else
                 {
@@ -53,13 +53,13 @@ namespace CSharpRegexTester
 
         private void RegexWorkerWorkComplete(object sender, RunWorkerCompletedEventArgs e)
         {
-            Tuple<Regex, MatchCollection, String> result = null;
+            Tuple<Regex, MatchCollection, string> result = null;
 
             if (e.Result != null)
             {
                 try
                 {
-                    result = (Tuple<Regex, MatchCollection, String>)e.Result;
+                    result = (Tuple<Regex, MatchCollection, string>)e.Result;
                 }
                 catch (Exception ex1)
                 {
@@ -70,8 +70,8 @@ namespace CSharpRegexTester
                         MatchesTreeView.Items.Clear();
 
                         var treeItem = new TreeViewItem { Header = "Exception" };
-                        treeItem.Items.Add(new TreeViewItem { Header = String.Format("Message: {0}", ex1.Message) });
-                        treeItem.Items.Add(new TreeViewItem { Header = String.Format("Source: {0}", ex1.Source) });
+                        treeItem.Items.Add(new TreeViewItem { Header = string.Format("Message: {0}", ex1.Message) });
+                        treeItem.Items.Add(new TreeViewItem { Header = string.Format("Source: {0}", ex1.Source) });
                         treeItem.IsExpanded = true;
 
                         MatchesTreeView.Items.Add(treeItem);
@@ -83,8 +83,8 @@ namespace CSharpRegexTester
                         MatchesTreeView.Items.Clear();
 
                         var treeItem = new TreeViewItem { Header = "Exception" };
-                        treeItem.Items.Add(new TreeViewItem { Header = String.Format("Message: {0}", ex2.Message) });
-                        treeItem.Items.Add(new TreeViewItem { Header = String.Format("Source: {0}", ex2.Source) });
+                        treeItem.Items.Add(new TreeViewItem { Header = string.Format("Message: {0}", ex2.Message) });
+                        treeItem.Items.Add(new TreeViewItem { Header = string.Format("Source: {0}", ex2.Source) });
                         treeItem.IsExpanded = true;
 
                         MatchesTreeView.Items.Add(treeItem);
@@ -115,37 +115,37 @@ namespace CSharpRegexTester
                         {
                             Match match = matches[i];
 
-                            TreeViewItem matchTreeItem = new TreeViewItem { Header = String.Format("[{0}] - {1}", i, match.Value) };
+                            var matchTreeItem = new TreeViewItem { Header = string.Format("[{0}] - {1}", i, match.Value) };
                             matchesTreeItem.Items.Add(matchTreeItem);
 
                             // Captures
-                            TreeViewItem capturesTreeItem = new TreeViewItem { Header = String.Format("Captures ({0})", match.Captures.Count) };
+                            var capturesTreeItem = new TreeViewItem { Header = string.Format("Captures ({0})", match.Captures.Count) };
                             matchTreeItem.Items.Add(capturesTreeItem);
                             for (int j = 0; j < match.Captures.Count; j++)
                             {
                                 Capture capture = match.Captures[j];
-                                TreeViewItem captureTreeItem = new TreeViewItem { Header = String.Format("[{0}] - [{1}] ({2} chars)", j, capture.Value, capture.Value.Length) };
+                                var captureTreeItem = new TreeViewItem { Header = string.Format("[{0}] - [{1}] ({2} chars)", j, capture.Value, capture.Value.Length) };
                                 capturesTreeItem.Items.Add(captureTreeItem);
                             }
 
                             // Groups
-                            TreeViewItem groupsTreeItem = new TreeViewItem { Header = String.Format("Groups ({0})", match.Groups.Count) };
+                            var groupsTreeItem = new TreeViewItem { Header = string.Format("Groups ({0})", match.Groups.Count) };
                             matchTreeItem.Items.Add(groupsTreeItem);
                             for (int j = 0; j < match.Groups.Count; j++)
                             {
                                 Group group = match.Groups[j];
-                                var groupName = regex.GroupNameFromNumber(j);
+                                string groupName = regex.GroupNameFromNumber(j);
 
                                 if (groupName != j.ToString())
                                 {
-                                    groupName = String.Format("<{0}>", groupName);
+                                    groupName = string.Format("<{0}>", groupName);
                                 }
                                 else
                                 {
-                                    groupName = String.Empty;
+                                    groupName = string.Empty;
                                 }
 
-                                TreeViewItem groupTreeItem = new TreeViewItem { Header = String.Format("[{0}]{1} - [{2}] ({3} chars)", j, groupName, group.Value, group.Value.Length) };
+                                var groupTreeItem = new TreeViewItem { Header = string.Format("[{0}]{1} - [{2}] ({3} chars)", j, groupName, group.Value, group.Value.Length) };
                                 groupsTreeItem.Items.Add(groupTreeItem);
                             }
 
@@ -192,27 +192,53 @@ namespace CSharpRegexTester
 
             RegexOptions options = RegexOptions.None;
             if (IgnoreCaseCheckBox.IsChecked.Value)
+            {
                 options = options | RegexOptions.IgnoreCase;
+            }
+
             if (ExplicitCaptureCheckBox.IsChecked.Value)
+            {
                 options = options | RegexOptions.ExplicitCapture;
+            }
+
             if (CompiledCheckBox.IsChecked.Value)
+            {
                 options = options | RegexOptions.Compiled;
+            }
+
             if (CultureInvariantCheckBox.IsChecked.Value)
+            {
                 options = options | RegexOptions.CultureInvariant;
+            }
+
             if (ECMAScriptCheckBox.IsChecked.Value)
+            {
                 options = options | RegexOptions.ECMAScript;
+            }
+
             if (IgnorePatternWhitespace.IsChecked.Value)
+            {
                 options = options | RegexOptions.IgnorePatternWhitespace;
+            }
+
             if (MultilineCheckBox.IsChecked.Value)
+            {
                 options = options | RegexOptions.Multiline;
+            }
+
             if (RightToLeftCheckBox.IsChecked.Value)
+            {
                 options = options | RegexOptions.RightToLeft;
+            }
+
             if (SinglelineCheckBox.IsChecked.Value)
+            {
                 options = options | RegexOptions.Singleline;
+            }
 
             try
             {
-                if (String.IsNullOrWhiteSpace(ExpressionTextBox.Text) || String.IsNullOrWhiteSpace(DataTextBox.Text))
+                if (string.IsNullOrWhiteSpace(ExpressionTextBox.Text) || string.IsNullOrWhiteSpace(DataTextBox.Text))
                 {
                     return;
                 }
@@ -220,15 +246,15 @@ namespace CSharpRegexTester
                 MatchesTreeView.Items.Clear();
                 MatchesTreeView.Items.Add("Working...");
 
-                regexWorker.RunWorkerAsync(new Tuple<String, String, String, RegexOptions>(ExpressionTextBox.Text, DataTextBox.Text, ReplacementTextTextBox.Text, options));
+                regexWorker.RunWorkerAsync(new Tuple<string, string, string, RegexOptions>(ExpressionTextBox.Text, DataTextBox.Text, ReplacementTextTextBox.Text, options));
             }
             catch (Exception e)
             {
                 MatchesTreeView.Items.Clear();
 
                 var treeItem = new TreeViewItem { Header = "Exception" };
-                treeItem.Items.Add(new TreeViewItem { Header = String.Format("Message: {0}", e.Message) });
-                treeItem.Items.Add(new TreeViewItem { Header = String.Format("Source: {0}", e.Source) });
+                treeItem.Items.Add(new TreeViewItem { Header = string.Format("Message: {0}", e.Message) });
+                treeItem.Items.Add(new TreeViewItem { Header = string.Format("Source: {0}", e.Source) });
                 treeItem.IsExpanded = true;
 
                 MatchesTreeView.Items.Add(treeItem);
@@ -270,7 +296,7 @@ namespace CSharpRegexTester
         private void RegexCharacterButton_Click(object sender, RoutedEventArgs e)
         {
             var source = (Button)e.Source;
-            var content = (String)source.Content;
+            string content = (string)source.Content;
 
             ExpressionTextBox.Text += content;
         }
