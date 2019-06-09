@@ -53,19 +53,19 @@ namespace CSharpRegexTester
 
         private void RegexWorkerWorkComplete(object sender, RunWorkerCompletedEventArgs e)
         {
-            Tuple<Regex, MatchCollection, string> result = null;
-
             if (e.Result != null)
             {
+                Tuple<Regex, MatchCollection, string> result;
                 try
                 {
                     result = (Tuple<Regex, MatchCollection, string>)e.Result;
                 }
-                catch (Exception ex1)
+                catch (Exception)
                 {
                     try
                     {
-                        ex1 = (Exception)e.Result;
+                        // TODO: Is this right?
+                        var ex1 = (Exception)e.Result;
 
                         MatchesTreeView.Items.Clear();
 
@@ -95,7 +95,6 @@ namespace CSharpRegexTester
 
                 if (result != null)
                 {
-
                     Regex regex = result.Item1;
                     MatchCollection matches = result.Item2;
 
@@ -104,11 +103,9 @@ namespace CSharpRegexTester
                         return;
                     }
 
-                    TreeViewItem matchesTreeItem = null;
-
                     if (matches.Count > 0)
                     {
-                        matchesTreeItem = new TreeViewItem { Header = "Matches" };
+                        var matchesTreeItem = new TreeViewItem { Header = "Matches" };
 
                         // Matches
                         for (int i = 0; i < matches.Count; i++)
@@ -193,47 +190,47 @@ namespace CSharpRegexTester
             RegexOptions options = RegexOptions.None;
             if (IgnoreCaseCheckBox.IsChecked.Value)
             {
-                options = options | RegexOptions.IgnoreCase;
+                options |= RegexOptions.IgnoreCase;
             }
 
             if (ExplicitCaptureCheckBox.IsChecked.Value)
             {
-                options = options | RegexOptions.ExplicitCapture;
+                options |= RegexOptions.ExplicitCapture;
             }
 
             if (CompiledCheckBox.IsChecked.Value)
             {
-                options = options | RegexOptions.Compiled;
+                options |= RegexOptions.Compiled;
             }
 
             if (CultureInvariantCheckBox.IsChecked.Value)
             {
-                options = options | RegexOptions.CultureInvariant;
+                options |= RegexOptions.CultureInvariant;
             }
 
             if (ECMAScriptCheckBox.IsChecked.Value)
             {
-                options = options | RegexOptions.ECMAScript;
+                options |= RegexOptions.ECMAScript;
             }
 
             if (IgnorePatternWhitespace.IsChecked.Value)
             {
-                options = options | RegexOptions.IgnorePatternWhitespace;
+                options |= RegexOptions.IgnorePatternWhitespace;
             }
 
             if (MultilineCheckBox.IsChecked.Value)
             {
-                options = options | RegexOptions.Multiline;
+                options |= RegexOptions.Multiline;
             }
 
             if (RightToLeftCheckBox.IsChecked.Value)
             {
-                options = options | RegexOptions.RightToLeft;
+                options |= RegexOptions.RightToLeft;
             }
 
             if (SinglelineCheckBox.IsChecked.Value)
             {
-                options = options | RegexOptions.Singleline;
+                options |= RegexOptions.Singleline;
             }
 
             try
@@ -299,6 +296,11 @@ namespace CSharpRegexTester
             string content = (string)source.Content;
 
             ExpressionTextBox.Text += content;
+        }
+
+        private void SaveAndExitButton_Click(object sender, RoutedEventArgs e)
+        {
+            // TODO: Implement save and exit
         }
     }
 }

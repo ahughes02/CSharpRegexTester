@@ -37,6 +37,6 @@
         <TextBox x:Name="ReplacementTextTextBox" HorizontalAlignment="Left" Height="50" Margin="22,354,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="400" TextChanged="TextBox_TextChanged" VerticalScrollBarVisibility="Auto" FontSize="14"/>
         <TextBox x:Name="ReplacementResultsTextBox" Margin="24,429,0,49" TextWrapping="Wrap" HorizontalAlignment="Left" Width="400" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" FontSize="14" IsReadOnly="True"/>
         <TreeView x:Name="MatchesTreeView" Margin="438,160,10,49" FontSize="14"/>
-        <Button x:Name="SaveAndExitButton" Content="Save and Exit" Height="23" Margin="0,0,10,10" Width="100" RenderTransformOrigin="2.19,0.55" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+        <Button x:Name="SaveAndExitButton" Content="Save and Exit" Height="23" Margin="0,0,10,10" Width="100" RenderTransformOrigin="2.19,0.55" HorizontalAlignment="Right" VerticalAlignment="Bottom" Click="SaveAndExitButton_Click"/>
     </Grid>
 </Window>
