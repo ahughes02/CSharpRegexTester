@@ -19,6 +19,154 @@ namespace CSharpRegexTester
             InitializeComponent();
             regexWorker.DoWork += RegexWorkerDoWork;
             regexWorker.RunWorkerCompleted += RegexWorkerWorkComplete;
+
+            var configFile = RegexTesterConfigurationFile.Load();
+
+            if (configFile != null)
+            {
+                DataTextBox.Text = configFile.CurrentTestData;
+                ExpressionTextBox.Text = configFile.CurrentExpression;
+                ReplacementTextTextBox.Text = configFile.CurrentReplacementText;
+            }
+
+            SetupAndRunRegexWorker();
+        }
+
+        /// <summary>
+        /// Text Changed Handler for ExpressionTextBox, DataTextBox and, ReplacementTextTextBox
+        /// </summary>
+        private void TextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (regexWorker.IsBusy)
+            {
+                regexWorker.CancelAsync();
+            }
+
+            SetupAndRunRegexWorker();
+        }
+
+        /// <summary>
+        /// Check Changed Handler for options checkboxes
+        /// </summary>
+        private void Checkbox_CheckChanged(object sender, EventArgs e)
+        {
+            if (regexWorker.IsBusy)
+            {
+                regexWorker.CancelAsync();
+            }
+
+            SetupAndRunRegexWorker();
+        }
+
+        private void ClearAllButton_Click(object sender, RoutedEventArgs e)
+        {
+            stopWork = true;
+            DataTextBox.Text = "";
+            ExpressionTextBox.Text = "";
+            ReplacementTextTextBox.Text = "";
+            ReplacementResultsTextBox.Text = "";
+            IgnoreCaseCheckBox.IsChecked = false;
+            MatchesTreeView.Items.Clear();
+            stopWork = false;
+        }
+
+        private void RegexCharacterButton_Click(object sender, RoutedEventArgs e)
+        {
+            var source = (Button)e.Source;
+            string content = (string)source.Content;
+
+            ExpressionTextBox.Text += content;
+        }
+
+        private void SaveAndExitButton_Click(object sender, RoutedEventArgs e)
+        {
+            var configFile = new RegexTesterConfigurationFile
+            {
+                CurrentExpression = ExpressionTextBox.Text,
+                CurrentReplacementText = ReplacementTextTextBox.Text,
+                CurrentTestData = DataTextBox.Text
+            };
+            configFile.Save();
+
+            Application.Current.Shutdown();
+        }
+
+        private void SetupAndRunRegexWorker()
+        {
+            if (!IsLoaded || stopWork)
+            {
+                return;
+            }
+
+            RegexOptions options = RegexOptions.None;
+            if (IgnoreCaseCheckBox.IsChecked.Value)
+            {
+                options |= RegexOptions.IgnoreCase;
+            }
+
+            if (ExplicitCaptureCheckBox.IsChecked.Value)
+            {
+                options |= RegexOptions.ExplicitCapture;
+            }
+
+            if (CompiledCheckBox.IsChecked.Value)
+            {
+                options |= RegexOptions.Compiled;
+            }
+
+            if (CultureInvariantCheckBox.IsChecked.Value)
+            {
+                options |= RegexOptions.CultureInvariant;
+            }
+
+            if (ECMAScriptCheckBox.IsChecked.Value)
+            {
+                options |= RegexOptions.ECMAScript;
+            }
+
+            if (IgnorePatternWhitespace.IsChecked.Value)
+            {
+                options |= RegexOptions.IgnorePatternWhitespace;
+            }
+
+            if (MultilineCheckBox.IsChecked.Value)
+            {
+                options |= RegexOptions.Multiline;
+            }
+
+            if (RightToLeftCheckBox.IsChecked.Value)
+            {
+                options |= RegexOptions.RightToLeft;
+            }
+
+            if (SinglelineCheckBox.IsChecked.Value)
+            {
+                options |= RegexOptions.Singleline;
+            }
+
+            try
+            {
+                if (string.IsNullOrWhiteSpace(ExpressionTextBox.Text) || string.IsNullOrWhiteSpace(DataTextBox.Text))
+                {
+                    return;
+                }
+
+                MatchesTreeView.Items.Clear();
+                MatchesTreeView.Items.Add("Working...");
+
+                regexWorker.RunWorkerAsync(new Tuple<string, string, string, RegexOptions>(ExpressionTextBox.Text, DataTextBox.Text, ReplacementTextTextBox.Text, options));
+            }
+            catch (Exception e)
+            {
+                MatchesTreeView.Items.Clear();
+
+                var treeItem = new TreeViewItem { Header = "Exception" };
+                treeItem.Items.Add(new TreeViewItem { Header = string.Format("Message: {0}", e.Message) });
+                treeItem.Items.Add(new TreeViewItem { Header = string.Format("Source: {0}", e.Source) });
+                treeItem.IsExpanded = true;
+
+                MatchesTreeView.Items.Add(treeItem);
+            }
         }
 
         private void RegexWorkerDoWork(object sender, DoWorkEventArgs e)
@@ -178,129 +326,6 @@ namespace CSharpRegexTester
                 MatchesTreeView.Items.Add("No Matches");
                 ReplacementResultsTextBox.Text = "";
             }
-        }
-
-        private void SetupAndRunRegexWorker()
-        {
-            if (!IsLoaded || stopWork)
-            {
-                return;
-            }
-
-            RegexOptions options = RegexOptions.None;
-            if (IgnoreCaseCheckBox.IsChecked.Value)
-            {
-                options |= RegexOptions.IgnoreCase;
-            }
-
-            if (ExplicitCaptureCheckBox.IsChecked.Value)
-            {
-                options |= RegexOptions.ExplicitCapture;
-            }
-
-            if (CompiledCheckBox.IsChecked.Value)
-            {
-                options |= RegexOptions.Compiled;
-            }
-
-            if (CultureInvariantCheckBox.IsChecked.Value)
-            {
-                options |= RegexOptions.CultureInvariant;
-            }
-
-            if (ECMAScriptCheckBox.IsChecked.Value)
-            {
-                options |= RegexOptions.ECMAScript;
-            }
-
-            if (IgnorePatternWhitespace.IsChecked.Value)
-            {
-                options |= RegexOptions.IgnorePatternWhitespace;
-            }
-
-            if (MultilineCheckBox.IsChecked.Value)
-            {
-                options |= RegexOptions.Multiline;
-            }
-
-            if (RightToLeftCheckBox.IsChecked.Value)
-            {
-                options |= RegexOptions.RightToLeft;
-            }
-
-            if (SinglelineCheckBox.IsChecked.Value)
-            {
-                options |= RegexOptions.Singleline;
-            }
-
-            try
-            {
-                if (string.IsNullOrWhiteSpace(ExpressionTextBox.Text) || string.IsNullOrWhiteSpace(DataTextBox.Text))
-                {
-                    return;
-                }
-
-                MatchesTreeView.Items.Clear();
-                MatchesTreeView.Items.Add("Working...");
-
-                regexWorker.RunWorkerAsync(new Tuple<string, string, string, RegexOptions>(ExpressionTextBox.Text, DataTextBox.Text, ReplacementTextTextBox.Text, options));
-            }
-            catch (Exception e)
-            {
-                MatchesTreeView.Items.Clear();
-
-                var treeItem = new TreeViewItem { Header = "Exception" };
-                treeItem.Items.Add(new TreeViewItem { Header = string.Format("Message: {0}", e.Message) });
-                treeItem.Items.Add(new TreeViewItem { Header = string.Format("Source: {0}", e.Source) });
-                treeItem.IsExpanded = true;
-
-                MatchesTreeView.Items.Add(treeItem);
-            }
-        }
-
-        private void TextBox_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            if (regexWorker.IsBusy)
-            {
-                regexWorker.CancelAsync();
-            }
-
-            SetupAndRunRegexWorker();
-        }
-
-        private void Checkbox_CheckChanged(object sender, EventArgs e)
-        {
-            if (regexWorker.IsBusy)
-            {
-                regexWorker.CancelAsync();
-            }
-
-            SetupAndRunRegexWorker();
-        }
-
-        private void ClearAllButton_Click(object sender, RoutedEventArgs e)
-        {
-            stopWork = true;
-            DataTextBox.Text = "";
-            ExpressionTextBox.Text = "";
-            ReplacementTextTextBox.Text = "";
-            ReplacementResultsTextBox.Text = "";
-            IgnoreCaseCheckBox.IsChecked = false;
-            MatchesTreeView.Items.Clear();
-            stopWork = false;
-        }
-
-        private void RegexCharacterButton_Click(object sender, RoutedEventArgs e)
-        {
-            var source = (Button)e.Source;
-            string content = (string)source.Content;
-
-            ExpressionTextBox.Text += content;
-        }
-
-        private void SaveAndExitButton_Click(object sender, RoutedEventArgs e)
-        {
-            // TODO: Implement save and exit
         }
     }
 }
