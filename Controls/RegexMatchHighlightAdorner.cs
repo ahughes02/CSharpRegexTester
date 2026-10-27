@@ -11,6 +11,8 @@ namespace CSharpRegexTester.Controls;
 /// </summary>
 public sealed class RegexMatchHighlightAdorner : Adorner
 {
+    public const int MaxRenderMatches = 1000;
+
     private static readonly Brush MatchFillBrush;
     private static readonly Pen MatchBorderPen;
     private static readonly Brush SelectedMatchFillBrush;
@@ -77,22 +79,33 @@ public sealed class RegexMatchHighlightAdorner : Adorner
             return;
         }
 
+        double width = textBox.ActualWidth;
+        double height = textBox.ActualHeight;
+        if (width <= 4 || height <= 4)
+        {
+            return;
+        }
+
+        // Visible viewport rect
+        var viewportRect = new Rect(0, 0, width, height);
+
         // Clip to the inner viewport area of the TextBox
-        var clipRect = new Rect(2, 2, Math.Max(0, textBox.ActualWidth - 4), Math.Max(0, textBox.ActualHeight - 4));
+        var clipRect = new Rect(2, 2, width - 4, height - 4);
         drawingContext.PushClip(new RectangleGeometry(clipRect));
 
         try
         {
             int textLength = textBox.Text.Length;
 
-            foreach (TextSpan span in matchSpans)
+            int count = Math.Min(matchSpans.Count, MaxRenderMatches);
+            for (int i = 0; i < count; i++)
             {
-                DrawSpan(drawingContext, span, textLength, MatchFillBrush, MatchBorderPen);
+                DrawSpan(drawingContext, matchSpans[i], textLength, viewportRect, MatchFillBrush, MatchBorderPen);
             }
 
             if (selectedSpan is { } active)
             {
-                DrawSpan(drawingContext, active, textLength, SelectedMatchFillBrush, SelectedMatchBorderPen);
+                DrawSpan(drawingContext, active, textLength, viewportRect, SelectedMatchFillBrush, SelectedMatchBorderPen);
             }
         }
         finally
@@ -101,7 +114,13 @@ public sealed class RegexMatchHighlightAdorner : Adorner
         }
     }
 
-    private void DrawSpan(DrawingContext drawingContext, TextSpan span, int textLength, Brush fill, Pen pen)
+    private void DrawSpan(
+        DrawingContext drawingContext,
+        TextSpan span,
+        int textLength,
+        Rect viewportRect,
+        Brush fill,
+        Pen pen)
     {
         if (span.Length <= 0 || span.Index < 0 || span.Index + span.Length > textLength)
         {
@@ -119,6 +138,14 @@ public sealed class RegexMatchHighlightAdorner : Adorner
             return;
         }
 
+        // Fast viewport bounds check: if entirely above or below visible viewport, skip drawing
+        double spanTop = Math.Min(startRect.Top, endRect.Top);
+        double spanBottom = Math.Max(startRect.Bottom, endRect.Bottom);
+        if (spanBottom < viewportRect.Top || spanTop > viewportRect.Bottom)
+        {
+            return;
+        }
+
         // Single-line span
         if (Math.Abs(startRect.Top - endRect.Top) < 2.0)
         {
@@ -130,7 +157,51 @@ public sealed class RegexMatchHighlightAdorner : Adorner
             return;
         }
 
-        // Multi-line span: draw per-line segments
+        // Multi-line span: draw coalesced segments by line
+        int startLine = textBox.GetLineIndexFromCharacterIndex(startIndex);
+        int endLine = textBox.GetLineIndexFromCharacterIndex(endIndex - 1);
+
+        if (startLine >= 0 && endLine >= startLine)
+        {
+            for (int line = startLine; line <= endLine; line++)
+            {
+                int lineStartChar = textBox.GetCharacterIndexFromLineIndex(line);
+                int lineLen = textBox.GetLineLength(line);
+                if (lineStartChar < 0 || lineLen <= 0)
+                {
+                    continue;
+                }
+
+                int segStart = Math.Max(startIndex, lineStartChar);
+                int segEnd = Math.Min(endIndex, lineStartChar + lineLen);
+
+                // Trim newline characters from the line segment
+                while (segEnd > segStart && (textBox.Text[segEnd - 1] == '\r' || textBox.Text[segEnd - 1] == '\n'))
+                {
+                    segEnd--;
+                }
+
+                if (segEnd <= segStart)
+                {
+                    continue;
+                }
+
+                Rect lineStartRect = getCharacterRect(segStart, false);
+                Rect lineEndRect = getCharacterRect(segEnd - 1, true);
+
+                if (!lineStartRect.IsEmpty && !lineEndRect.IsEmpty)
+                {
+                    var segRect = new Rect(lineStartRect.TopLeft, lineEndRect.BottomRight);
+                    if (segRect.Width > 0 && segRect.Height > 0 && segRect.IntersectsWith(viewportRect))
+                    {
+                        drawingContext.DrawRoundedRectangle(fill, pen, segRect, 2, 2);
+                    }
+                }
+            }
+            return;
+        }
+
+        // Fallback if line indexes are not available
         Rect currentLineRect = startRect;
         for (int i = startIndex; i < endIndex; i++)
         {
@@ -148,7 +219,7 @@ public sealed class RegexMatchHighlightAdorner : Adorner
             }
             else
             {
-                if (currentLineRect.Width > 0 && currentLineRect.Height > 0)
+                if (currentLineRect.Width > 0 && currentLineRect.Height > 0 && currentLineRect.IntersectsWith(viewportRect))
                 {
                     drawingContext.DrawRoundedRectangle(fill, pen, currentLineRect, 2, 2);
                 }
@@ -156,7 +227,7 @@ public sealed class RegexMatchHighlightAdorner : Adorner
             }
         }
 
-        if (currentLineRect.Width > 0 && currentLineRect.Height > 0)
+        if (currentLineRect.Width > 0 && currentLineRect.Height > 0 && currentLineRect.IntersectsWith(viewportRect))
         {
             drawingContext.DrawRoundedRectangle(fill, pen, currentLineRect, 2, 2);
         }

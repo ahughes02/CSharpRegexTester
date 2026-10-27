@@ -156,6 +156,21 @@ public class MainWindowAndAdornerTests
             Assert.Equal("Matches (2)", rootItem.Header);
             Assert.Equal("[Hello] [123]", window.ReplacementResultsTextBox.Text);
 
+            // Test DisplayResults exceeding MaxTreeMatches and MaxSplitDisplayItems
+            var manyMatches = new List<MatchSnapshot>();
+            for (int m = 0; m < 1005; m++)
+            {
+                manyMatches.Add(new MatchSnapshot(m, 1, "x", [], []));
+            }
+            var manySplits = new List<string>();
+            for (int s = 0; s < 1005; s++)
+            {
+                manySplits.Add("item");
+            }
+            var largeResult = new RegexEvaluationResult(manyMatches, "replaced", manySplits, TimeSpan.FromMilliseconds(10));
+            InvokePrivate(window, "DisplayResults", largeResult);
+            Assert.Contains("showing first", ((TreeViewItem)window.MatchesTreeView.Items[0]).Header.ToString()!);
+
             // Select a match TreeViewItem to trigger MatchesTreeView_SelectedItemChanged
             var firstMatchItem = Assert.IsType<TreeViewItem>(rootItem.Items[0]);
             InvokePrivate(
@@ -268,6 +283,10 @@ public class MainWindowAndAdornerTests
 
             window.ExpressionTextBox.Text = string.Empty;
             WaitWithDispatcher((Task)InvokePrivate(window, "SetupAndRunRegexWorkerAsync")!);
+
+            // Test TextBox_TextChanged and DebounceTimer_Tick
+            window.DataTextBox.Text = "New Data Triggering Debounce";
+            InvokePrivate(window, "DebounceTimer_Tick", window, EventArgs.Empty);
 
             // Test Window_Closing saves configuration
             InvokePrivate(window, "Window_Closing", window, new System.ComponentModel.CancelEventArgs());

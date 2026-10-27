@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
+using System.Windows.Threading;
 using CSharpRegexTester.Controls;
 using CSharpRegexTester.Models;
 using CSharpRegexTester.Services;
@@ -14,8 +15,12 @@ namespace CSharpRegexTester;
 /// </summary>
 public partial class MainWindow : Window
 {
+    public const int MaxTreeMatches = 1000;
+    public const int MaxSplitDisplayItems = 1000;
+
     private readonly (CheckBox CheckBox, RegexOptions Option)[] optionMappings;
     private readonly List<string> savedExpressions = [];
+    private readonly DispatcherTimer debounceTimer;
 
     private bool stopWork = true;
     private CancellationTokenSource? regexWorkCts;
@@ -24,6 +29,12 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+
+        debounceTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(150)
+        };
+        debounceTimer.Tick += DebounceTimer_Tick;
 
         optionMappings =
         [
@@ -92,6 +103,15 @@ public partial class MainWindow : Window
         }
 
         UpdateCSharpSnippet();
+
+        // Debounce evaluation so pasting large text or typing rapidly does not block the UI
+        debounceTimer.Stop();
+        debounceTimer.Start();
+    }
+
+    private void DebounceTimer_Tick(object? sender, EventArgs e)
+    {
+        debounceTimer.Stop();
         _ = SetupAndRunRegexWorkerAsync();
     }
 
@@ -142,6 +162,7 @@ public partial class MainWindow : Window
     private void ClearAllButton_Click(object sender, RoutedEventArgs e)
     {
         stopWork = true;
+        debounceTimer.Stop();
         CancelPendingEvaluation();
 
         DataTextBox.Text = string.Empty;
@@ -261,6 +282,7 @@ public partial class MainWindow : Window
 
     private void Window_Closing(object? sender, CancelEventArgs e)
     {
+        debounceTimer.Stop();
         CancelPendingEvaluation();
         SaveConfiguration();
     }
@@ -384,11 +406,16 @@ public partial class MainWindow : Window
 
     private void DisplayResults(RegexEvaluationResult result)
     {
-        var formattedSplits = new List<string>(result.SplitResults.Count);
-        for (int i = 0; i < result.SplitResults.Count; i++)
+        int splitCount = Math.Min(result.SplitResults.Count, MaxSplitDisplayItems);
+        var formattedSplits = new List<string>(splitCount + (result.SplitResults.Count > MaxSplitDisplayItems ? 1 : 0));
+        for (int i = 0; i < splitCount; i++)
         {
             string part = result.SplitResults[i];
             formattedSplits.Add($"[{i}] \"{part}\" ({part.Length} chars)");
+        }
+        if (result.SplitResults.Count > MaxSplitDisplayItems)
+        {
+            formattedSplits.Add($"... and {result.SplitResults.Count - MaxSplitDisplayItems:N0} more split items.");
         }
         SplitResultsListBox.ItemsSource = formattedSplits;
 
@@ -396,7 +423,12 @@ public partial class MainWindow : Window
 
         if (result.Matches.Count > 0)
         {
-            var matchesTreeItem = new TreeViewItem { Header = $"Matches ({result.Matches.Count})" };
+            string rootHeader = result.Matches.Count > MaxTreeMatches
+                ? $"Matches ({result.Matches.Count:N0} total, showing first {MaxTreeMatches:N0})"
+                : $"Matches ({result.Matches.Count:N0})";
+            var matchesTreeItem = new TreeViewItem { Header = rootHeader };
+
+            int treeDisplayCount = Math.Min(result.Matches.Count, MaxTreeMatches);
             var highlightSpans = new List<TextSpan>(result.Matches.Count);
 
             for (int i = 0; i < result.Matches.Count; i++)
@@ -404,52 +436,63 @@ public partial class MainWindow : Window
                 MatchSnapshot match = result.Matches[i];
                 highlightSpans.Add(match.Span);
 
-                var matchTreeItem = new TreeViewItem
+                if (i < treeDisplayCount)
                 {
-                    Header = $"[{i}] - [{match.Value}] (Index: {match.Index}, Length: {match.Length})",
-                    Tag = match.Span
-                };
-                matchesTreeItem.Items.Add(matchTreeItem);
-
-                // Captures
-                var capturesTreeItem = new TreeViewItem
-                {
-                    Header = $"Captures ({match.Captures.Count})",
-                    IsExpanded = ExpandCapturesCheckBox.IsChecked == true
-                };
-                matchTreeItem.Items.Add(capturesTreeItem);
-                for (int j = 0; j < match.Captures.Count; j++)
-                {
-                    CaptureSnapshot capture = match.Captures[j];
-                    capturesTreeItem.Items.Add(new TreeViewItem
+                    var matchTreeItem = new TreeViewItem
                     {
-                        Header = $"[{j}] - [{capture.Value}] (Index: {capture.Index}, Length: {capture.Length})",
-                        Tag = capture.Span
-                    });
-                }
+                        Header = $"[{i}] - [{match.Value}] (Index: {match.Index}, Length: {match.Length})",
+                        Tag = match.Span
+                    };
+                    matchesTreeItem.Items.Add(matchTreeItem);
 
-                // Groups
-                var groupsTreeItem = new TreeViewItem
-                {
-                    Header = $"Groups ({match.Groups.Count})",
-                    IsExpanded = ExpandGroupsCheckBox.IsChecked == true
-                };
-                matchTreeItem.Items.Add(groupsTreeItem);
-                for (int j = 0; j < match.Groups.Count; j++)
-                {
-                    GroupSnapshot group = match.Groups[j];
-                    string header = group.Success
-                        ? $"[{group.Number}]{group.Name} - [{group.Value}] (Index: {group.Index}, Length: {group.Length})"
-                        : $"[{group.Number}]{group.Name} - <not matched>";
-
-                    groupsTreeItem.Items.Add(new TreeViewItem
+                    // Captures
+                    var capturesTreeItem = new TreeViewItem
                     {
-                        Header = header,
-                        Tag = group.Span
-                    });
-                }
+                        Header = $"Captures ({match.Captures.Count})",
+                        IsExpanded = ExpandCapturesCheckBox.IsChecked == true
+                    };
+                    matchTreeItem.Items.Add(capturesTreeItem);
+                    for (int j = 0; j < match.Captures.Count; j++)
+                    {
+                        CaptureSnapshot capture = match.Captures[j];
+                        capturesTreeItem.Items.Add(new TreeViewItem
+                        {
+                            Header = $"[{j}] - [{capture.Value}] (Index: {capture.Index}, Length: {capture.Length})",
+                            Tag = capture.Span
+                        });
+                    }
 
-                matchTreeItem.IsExpanded = true;
+                    // Groups
+                    var groupsTreeItem = new TreeViewItem
+                    {
+                        Header = $"Groups ({match.Groups.Count})",
+                        IsExpanded = ExpandGroupsCheckBox.IsChecked == true
+                    };
+                    matchTreeItem.Items.Add(groupsTreeItem);
+                    for (int j = 0; j < match.Groups.Count; j++)
+                    {
+                        GroupSnapshot group = match.Groups[j];
+                        string header = group.Success
+                            ? $"[{group.Number}]{group.Name} - [{group.Value}] (Index: {group.Index}, Length: {group.Length})"
+                            : $"[{group.Number}]{group.Name} - <not matched>";
+
+                        groupsTreeItem.Items.Add(new TreeViewItem
+                        {
+                            Header = header,
+                            Tag = group.Span
+                        });
+                    }
+
+                    matchTreeItem.IsExpanded = true;
+                }
+            }
+
+            if (result.Matches.Count > MaxTreeMatches)
+            {
+                matchesTreeItem.Items.Add(new TreeViewItem
+                {
+                    Header = $"... {result.Matches.Count - MaxTreeMatches:N0} additional matches not shown in tree for performance."
+                });
             }
 
             matchesTreeItem.IsExpanded = true;
@@ -458,9 +501,9 @@ public partial class MainWindow : Window
             MatchesTreeView.Items.Add(matchesTreeItem);
             ReplacementResultsTextBox.Text = result.ReplacementResults;
 
-            string matchLabel = result.Matches.Count == 1 ? "1 match" : $"{result.Matches.Count} matches";
+            string matchLabel = result.Matches.Count == 1 ? "1 match" : $"{result.Matches.Count:N0} matches";
             MatchSummaryTextBlock.Text = $"{matchLabel} ({elapsedMs:F2} ms)";
-            StatusTextBlock.Text = $"Found {matchLabel} and {result.SplitResults.Count} split segment(s) in {elapsedMs:F2} ms. Click any match/group in the tree to locate it.";
+            StatusTextBlock.Text = $"Found {matchLabel} and {result.SplitResults.Count:N0} split segment(s) in {elapsedMs:F2} ms. Click any match/group in the tree to locate it.";
             highlightAdorner?.UpdateHighlights(highlightSpans);
         }
         else
