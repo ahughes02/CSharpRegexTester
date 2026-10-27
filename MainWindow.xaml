@@ -60,38 +60,31 @@
                 </Grid.RowDefinitions>
 
                 <!-- Quick-Insert Token Toolbar -->
-                <DockPanel Grid.Row="0" Margin="0,0,0,6" LastChildFill="False">
-                    <WrapPanel DockPanel.Dock="Left" VerticalAlignment="Center">
-                        <Button x:Name="CaretButton" Style="{StaticResource QuickInsertButtonStyle}" Content="^" Tag="^" ToolTip="Start of string or line (^)"/>
-                        <Button x:Name="DollarSignButton" Style="{StaticResource QuickInsertButtonStyle}" Content="$" Tag="$" Margin="0,0,8,3" ToolTip="End of string or line ($)"/>
+                <WrapPanel Grid.Row="0" Margin="0,0,0,6" VerticalAlignment="Center">
+                    <Button x:Name="CaretButton" Style="{StaticResource QuickInsertButtonStyle}" Content="^" Tag="^" ToolTip="Start of string or line (^)"/>
+                    <Button x:Name="DollarSignButton" Style="{StaticResource QuickInsertButtonStyle}" Content="$" Tag="$" Margin="0,0,8,3" ToolTip="End of string or line ($)"/>
 
-                        <Button x:Name="WordCharacterButton" Style="{StaticResource QuickInsertButtonStyle}" Content="\w" Tag="\w" ToolTip="Word character (\w)"/>
-                        <Button x:Name="NonWordCharacterButton" Style="{StaticResource QuickInsertButtonStyle}" Content="\W" Tag="\W" ToolTip="Non-word character (\W)"/>
-                        <Button x:Name="DigitButton" Style="{StaticResource QuickInsertButtonStyle}" Content="\d" Tag="\d" ToolTip="Digit character (\d)"/>
-                        <Button x:Name="NonDigitButton" Style="{StaticResource QuickInsertButtonStyle}" Content="\D" Tag="\D" ToolTip="Non-digit character (\D)"/>
-                        <Button x:Name="WhitespaceButton" Style="{StaticResource QuickInsertButtonStyle}" Content="\s" Tag="\s" ToolTip="Whitespace character (\s)"/>
-                        <Button x:Name="NonWhitespaceButton" Style="{StaticResource QuickInsertButtonStyle}" Content="\S" Tag="\S" ToolTip="Non-whitespace character (\S)"/>
-                        <Button x:Name="WordBoundaryButton" Style="{StaticResource QuickInsertButtonStyle}" Content="\b" Tag="\b" Margin="0,0,8,3" ToolTip="Word boundary (\b)"/>
+                    <Button x:Name="WordCharacterButton" Style="{StaticResource QuickInsertButtonStyle}" Content="\w" Tag="\w" ToolTip="Word character (\w)"/>
+                    <Button x:Name="NonWordCharacterButton" Style="{StaticResource QuickInsertButtonStyle}" Content="\W" Tag="\W" ToolTip="Non-word character (\W)"/>
+                    <Button x:Name="DigitButton" Style="{StaticResource QuickInsertButtonStyle}" Content="\d" Tag="\d" ToolTip="Digit character (\d)"/>
+                    <Button x:Name="NonDigitButton" Style="{StaticResource QuickInsertButtonStyle}" Content="\D" Tag="\D" ToolTip="Non-digit character (\D)"/>
+                    <Button x:Name="WhitespaceButton" Style="{StaticResource QuickInsertButtonStyle}" Content="\s" Tag="\s" ToolTip="Whitespace character (\s)"/>
+                    <Button x:Name="NonWhitespaceButton" Style="{StaticResource QuickInsertButtonStyle}" Content="\S" Tag="\S" ToolTip="Non-whitespace character (\S)"/>
+                    <Button x:Name="WordBoundaryButton" Style="{StaticResource QuickInsertButtonStyle}" Content="\b" Tag="\b" Margin="0,0,8,3" ToolTip="Word boundary (\b)"/>
 
-                        <Button x:Name="PeriodButton" Style="{StaticResource QuickInsertButtonStyle}" Content="." Tag="." ToolTip="Any character except newline (.)"/>
-                        <Button x:Name="PlusSignButton" Style="{StaticResource QuickInsertButtonStyle}" Content="+" Tag="+" ToolTip="One or more times (+)"/>
-                        <Button x:Name="AsteriskButton" Style="{StaticResource QuickInsertButtonStyle}" Content="*" Tag="*" Margin="0,0,8,3" ToolTip="Zero or more times (*)"/>
+                    <Button x:Name="PeriodButton" Style="{StaticResource QuickInsertButtonStyle}" Content="." Tag="." ToolTip="Any character except newline (.)"/>
+                    <Button x:Name="PlusSignButton" Style="{StaticResource QuickInsertButtonStyle}" Content="+" Tag="+" ToolTip="One or more times (+)"/>
+                    <Button x:Name="AsteriskButton" Style="{StaticResource QuickInsertButtonStyle}" Content="*" Tag="*" Margin="0,0,8,3" ToolTip="Zero or more times (*)"/>
 
-                        <Button x:Name="CharClassButton" Style="{StaticResource QuickInsertButtonStyle}" Content="[a-z]" Tag="[a-z]" ToolTip="Character range/set ([a-z])"/>
-                        <Button x:Name="NegatedCharClassButton" Style="{StaticResource QuickInsertButtonStyle}" Content="[^...]" Tag="[^]" Margin="0,0,8,3" ToolTip="Negated character class ([^...])"/>
+                    <Button x:Name="CharClassButton" Style="{StaticResource QuickInsertButtonStyle}" Content="[a-z]" Tag="[a-z]" ToolTip="Character range/set ([a-z])"/>
+                    <Button x:Name="NegatedCharClassButton" Style="{StaticResource QuickInsertButtonStyle}" Content="[^...]" Tag="[^]" Margin="0,0,8,3" ToolTip="Negated character class ([^...])"/>
 
-                        <Button x:Name="GroupButton" Style="{StaticResource QuickInsertButtonStyle}" Content="(...)" Tag="()" ToolTip="Capturing group (...) — wraps selected text"/>
-                        <Button x:Name="NonCapturingGroupButton" Style="{StaticResource QuickInsertButtonStyle}" Content="(?:...)" Tag="(?:)" ToolTip="Non-capturing group (?:...) — wraps selected text"/>
-                        <Button x:Name="NamedGroupButton" Style="{StaticResource QuickInsertButtonStyle}" Content="(?&lt;n&gt;)" Tag="(?&lt;name&gt;)" ToolTip="Named capturing group (?&lt;name&gt;...) — wraps selected text"/>
-                        <Button x:Name="LookaheadButton" Style="{StaticResource QuickInsertButtonStyle}" Content="(?=...)" Tag="(?=)" ToolTip="Positive lookahead (?=...)"/>
-                        <Button x:Name="LookbehindButton" Style="{StaticResource QuickInsertButtonStyle}" Content="(?&lt;=...)" Tag="(?&lt;=)" Margin="0,0,8,3" ToolTip="Positive lookbehind (?&lt;=...)"/>
-                    </WrapPanel>
-
-                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button x:Name="CopyCSharpButton" Content="Copy as C#" Height="24" Padding="8,0" Margin="0,0,6,3" Click="CopyCSharpButton_Click" ToolTip="Copy ready-to-use C# [GeneratedRegex] and Regex code to clipboard"/>
-                        <Button x:Name="ClearAllButton" Content="Clear All" Height="24" Padding="8,0" Margin="0,0,0,3" Click="ClearAllButton_Click" ToolTip="Clear expression, inputs, results, and reset all options"/>
-                    </StackPanel>
-                </DockPanel>
+                    <Button x:Name="GroupButton" Style="{StaticResource QuickInsertButtonStyle}" Content="(...)" Tag="()" ToolTip="Capturing group (...) — wraps selected text"/>
+                    <Button x:Name="NonCapturingGroupButton" Style="{StaticResource QuickInsertButtonStyle}" Content="(?:...)" Tag="(?:)" ToolTip="Non-capturing group (?:...) — wraps selected text"/>
+                    <Button x:Name="NamedGroupButton" Style="{StaticResource QuickInsertButtonStyle}" Content="(?&lt;n&gt;)" Tag="(?&lt;name&gt;)" ToolTip="Named capturing group (?&lt;name&gt;...) — wraps selected text"/>
+                    <Button x:Name="LookaheadButton" Style="{StaticResource QuickInsertButtonStyle}" Content="(?=...)" Tag="(?=)" ToolTip="Positive lookahead (?=...)"/>
+                    <Button x:Name="LookbehindButton" Style="{StaticResource QuickInsertButtonStyle}" Content="(?&lt;=...)" Tag="(?&lt;=)" ToolTip="Positive lookbehind (?&lt;=...)"/>
+                </WrapPanel>
 
                 <!-- Regular Expression Input with Native Watermark -->
                 <Grid Grid.Row="1">
@@ -120,11 +113,13 @@
                     </TextBlock>
                 </Grid>
 
-                <!-- Saved Expressions / Pattern History Bar -->
+                <!-- Saved Expressions & Expression Action Bar -->
                 <Grid Grid.Row="2" Margin="0,6,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
@@ -151,6 +146,22 @@
                             Margin="6,0,0,0"
                             Click="RemoveSavedExpressionButton_Click"
                             ToolTip="Remove selected pattern from saved patterns"/>
+                    <Button x:Name="CopyCSharpButton"
+                            Grid.Column="4"
+                            Content="Copy as C#"
+                            Height="24"
+                            Padding="8,0"
+                            Margin="12,0,0,0"
+                            Click="CopyCSharpButton_Click"
+                            ToolTip="Copy ready-to-use C# [GeneratedRegex] and Regex code to clipboard"/>
+                    <Button x:Name="ClearAllButton"
+                            Grid.Column="5"
+                            Content="Clear All"
+                            Height="24"
+                            Padding="8,0"
+                            Margin="6,0,0,0"
+                            Click="ClearAllButton_Click"
+                            ToolTip="Clear expression, inputs, results, and reset all options"/>
                 </Grid>
             </Grid>
 
