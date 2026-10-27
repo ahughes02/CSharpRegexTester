@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace CSharpRegexTester;
 
@@ -9,8 +10,16 @@ public class RegexTesterConfigurationFile
     public string CurrentExpression { get; set; } = string.Empty;
     public string CurrentReplacementText { get; set; } = string.Empty;
     public string CurrentTestData { get; set; } = string.Empty;
+    public RegexOptions SelectedOptions { get; set; } = RegexOptions.None;
+    public bool ExpandCaptures { get; set; }
+    public bool ExpandGroups { get; set; }
 
     private const string CFG_FILE_NAME = "RegExTester.cfg";
+
+    private static readonly string AppDataCfgPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "CSharpRegexTester",
+        CFG_FILE_NAME);
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -19,14 +28,20 @@ public class RegexTesterConfigurationFile
 
     public static RegexTesterConfigurationFile? Load()
     {
-        if (!File.Exists(CFG_FILE_NAME))
+        string? pathToLoad = File.Exists(AppDataCfgPath)
+            ? AppDataCfgPath
+            : File.Exists(CFG_FILE_NAME)
+                ? CFG_FILE_NAME
+                : null;
+
+        if (pathToLoad is null)
         {
             return null;
         }
 
         try
         {
-            using FileStream configStream = File.OpenRead(CFG_FILE_NAME);
+            using FileStream configStream = File.OpenRead(pathToLoad);
             return JsonSerializer.Deserialize<RegexTesterConfigurationFile>(configStream, JsonOptions);
         }
         catch (Exception)
@@ -37,8 +52,23 @@ public class RegexTesterConfigurationFile
 
     public void Save()
     {
-        using FileStream configStream = File.Create(CFG_FILE_NAME);
-        JsonSerializer.Serialize(configStream, this, JsonOptions);
-        configStream.Flush();
+        try
+        {
+            string? directory = Path.GetDirectoryName(AppDataCfgPath);
+            if (!string.IsNullOrEmpty(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            using FileStream configStream = File.Create(AppDataCfgPath);
+            JsonSerializer.Serialize(configStream, this, JsonOptions);
+            configStream.Flush();
+        }
+        catch (Exception)
+        {
+            using FileStream fallbackStream = File.Create(CFG_FILE_NAME);
+            JsonSerializer.Serialize(fallbackStream, this, JsonOptions);
+            fallbackStream.Flush();
+        }
     }
 }

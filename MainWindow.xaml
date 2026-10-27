@@ -5,49 +5,283 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:CSharpRegexTester"
         mc:Ignorable="d"
-        Title="MainWindow" Height="640" Width="1000">
-    <Grid Margin="0,0,2,0">
-        <Button x:Name="CaretButton" Content="^" HorizontalAlignment="Left" Height="23" Margin="24,31,0,0" VerticalAlignment="Top" Width="19" HorizontalContentAlignment="Center" Click="RegexCharacterButton_Click"/>
-        <Button x:Name="WordCharacterButton" Content="\w" HorizontalAlignment="Left" Height="23" Margin="60,31,0,0" VerticalAlignment="Top" Width="19" Click="RegexCharacterButton_Click"/>
-        <Button x:Name="NonWordCharacterButton" Content="\W" HorizontalAlignment="Left" Height="23" Margin="84,31,0,0" VerticalAlignment="Top" Width="19" Click="RegexCharacterButton_Click"/>
-        <Button x:Name="DigitButton" Content="\d" HorizontalAlignment="Left" Height="23" Margin="108,31,0,0" VerticalAlignment="Top" Width="19" Click="RegexCharacterButton_Click"/>
-        <Button x:Name="PeriodButton" Content="." HorizontalAlignment="Left" Height="23" Margin="145,31,0,0" VerticalAlignment="Top" Width="19" VerticalContentAlignment="Center" Click="RegexCharacterButton_Click"/>
-        <Button x:Name="PlusSignButton" Content="+" HorizontalAlignment="Left" Height="23" Margin="169,31,0,0" VerticalAlignment="Top" Width="19" Click="RegexCharacterButton_Click"/>
-        <Button x:Name="AsteriskButton" Content="*" HorizontalAlignment="Left" Height="23" Margin="193,31,0,0" VerticalAlignment="Top" Width="19" RenderTransformOrigin="2.19,0.55" Click="RegexCharacterButton_Click"/>
-        <Button x:Name="DollarSignButton" Content="$" HorizontalAlignment="Left" Height="23" Margin="238,31,0,0" VerticalAlignment="Top" Width="19" RenderTransformOrigin="2.19,0.55" Click="RegexCharacterButton_Click"/>
-        <Button x:Name="ClearAllButton" Content="Clear All" HorizontalAlignment="Left" Height="23" Margin="461,31,0,0" VerticalAlignment="Top" Width="60" RenderTransformOrigin="2.19,0.55" Click="ClearAllButton_Click"/>
-        <CheckBox x:Name="IgnoreCaseCheckBox" Content="IgnoreCase" HorizontalAlignment="Left" Margin="545,56,0,0" VerticalAlignment="Top" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
-        <CheckBox x:Name="SinglelineCheckBox" Content="Singleline" HorizontalAlignment="Left" Margin="545,76,0,0" VerticalAlignment="Top" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
-        <CheckBox x:Name="MultilineCheckBox" Content="Multiline" HorizontalAlignment="Left" Margin="545,96,0,0" VerticalAlignment="Top" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
-        <CheckBox x:Name="ExplicitCaptureCheckBox" Content="ExplicitCapture" HorizontalAlignment="Left" Margin="647,56,0,0" VerticalAlignment="Top" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
-        <CheckBox x:Name="RightToLeftCheckBox" Content="RightToLeft" HorizontalAlignment="Left" Margin="759,56,0,0" VerticalAlignment="Top" Grid.ColumnSpan="2" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
-        <CheckBox x:Name="ECMAScriptCheckBox" Content="ECMAScript" HorizontalAlignment="Left" Margin="647,76,0,0" VerticalAlignment="Top" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
-        <CheckBox x:Name="CultureInvariantCheckBox" Content="CultureInvariant" HorizontalAlignment="Left" Margin="647,96,0,0" VerticalAlignment="Top" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
-        <CheckBox x:Name="CompiledCheckBox" Content="Compiled" HorizontalAlignment="Left" Margin="759,76,0,0" VerticalAlignment="Top" Grid.ColumnSpan="2" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
-        <CheckBox x:Name="IgnorePatternWhitespace" Content="IgnorePatternWhitespace" HorizontalAlignment="Left" Margin="759,96,0,0" VerticalAlignment="Top" Grid.ColumnSpan="3" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
-        <CheckBox x:Name="ExpandCapturesCheckBox" Content="Expand Captures" HorizontalAlignment="Left" Margin="537,140,0,0" VerticalAlignment="Top" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
-        <CheckBox x:Name="ExpandGroupsCheckBox" Content="Expand Groups" HorizontalAlignment="Left" Margin="668,140,0,0" VerticalAlignment="Top" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
-        <Label x:Name="MatchResultsLabel" Content="Match Results&#xD;&#xA;" HorizontalAlignment="Left" Margin="432,134,0,0" VerticalAlignment="Top" FontWeight="Bold"/>
-        <Label x:Name="TestDataLabel" Content="Test Data&#xA;" HorizontalAlignment="Left" Margin="22,134,0,0" VerticalAlignment="Top" FontWeight="Bold"/>
-        <Label x:Name="ReplacementTextLabel" Content="Replacement Text&#xA;" HorizontalAlignment="Left" Margin="24,330,0,0" VerticalAlignment="Top" FontWeight="Bold"/>
-        <Label x:Name="ReplacementResultsLabel" Content="Replacement Results&#xA;" HorizontalAlignment="Left" Margin="22,407,0,0" VerticalAlignment="Top" FontWeight="Bold" Height="33"/>
-        <TextBox x:Name="ExpressionTextBox" Height="60" Margin="24,59,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="497" HorizontalAlignment="Left" TextChanged="TextBox_TextChanged" VerticalScrollBarVisibility="Auto" FontSize="14"/>
-        <TextBlock Text="Enter Regular Expression Here" Margin="29,62,0,0" VerticalAlignment="Top" HorizontalAlignment="Left" Foreground="Gray" FontSize="14" IsHitTestVisible="False">
-            <TextBlock.Style>
-                <Style TargetType="TextBlock">
-                    <Setter Property="Visibility" Value="Collapsed"/>
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding Text, ElementName=ExpressionTextBox}" Value="">
-                            <Setter Property="Visibility" Value="Visible"/>
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </TextBlock.Style>
-        </TextBlock>
-        <TextBox x:Name="DataTextBox" HorizontalAlignment="Left" Height="170" Margin="22,160,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="400" TextChanged="TextBox_TextChanged" AcceptsReturn="True" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" FontSize="14"/>
-        <TextBox x:Name="ReplacementTextTextBox" HorizontalAlignment="Left" Height="50" Margin="22,354,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="400" TextChanged="TextBox_TextChanged" VerticalScrollBarVisibility="Auto" FontSize="14"/>
-        <TextBox x:Name="ReplacementResultsTextBox" Margin="24,429,0,49" TextWrapping="Wrap" HorizontalAlignment="Left" Width="400" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" FontSize="14" IsReadOnly="True"/>
-        <TreeView x:Name="MatchesTreeView" Margin="438,160,10,49" FontSize="14"/>
-        <Button x:Name="SaveAndExitButton" Content="Save and Exit" Height="23" Margin="0,0,10,10" Width="100" RenderTransformOrigin="2.19,0.55" HorizontalAlignment="Right" VerticalAlignment="Bottom" Click="SaveAndExitButton_Click"/>
+        Title="C# Regex Tester (.NET 10)"
+        Height="720"
+        Width="1120"
+        MinHeight="540"
+        MinWidth="860"
+        Closing="Window_Closing">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Top Panel: Quick-Insert Toolbar, Expression Input, Saved Expressions & RegexOptions -->
+        <Grid Grid.Row="0" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left side of top panel: Toolbar + Expression TextBox + History -->
+            <Grid Grid.Column="0" Margin="0,0,16,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Quick-Insert Token Toolbar -->
+                <DockPanel Grid.Row="0" Margin="0,0,0,6" LastChildFill="False">
+                    <WrapPanel DockPanel.Dock="Left" VerticalAlignment="Center">
+                        <Button x:Name="CaretButton" Content="^" Tag="^" Width="26" Height="24" Margin="0,0,3,3" Click="RegexCharacterButton_Click" ToolTip="Start of string or line (^)"/>
+                        <Button x:Name="DollarSignButton" Content="$" Tag="$" Width="26" Height="24" Margin="0,0,8,3" Click="RegexCharacterButton_Click" ToolTip="End of string or line ($)"/>
+
+                        <Button x:Name="WordCharacterButton" Content="\w" Tag="\w" Width="28" Height="24" Margin="0,0,3,3" Click="RegexCharacterButton_Click" ToolTip="Word character (\w)"/>
+                        <Button x:Name="NonWordCharacterButton" Content="\W" Tag="\W" Width="28" Height="24" Margin="0,0,3,3" Click="RegexCharacterButton_Click" ToolTip="Non-word character (\W)"/>
+                        <Button x:Name="DigitButton" Content="\d" Tag="\d" Width="28" Height="24" Margin="0,0,3,3" Click="RegexCharacterButton_Click" ToolTip="Digit character (\d)"/>
+                        <Button x:Name="NonDigitButton" Content="\D" Tag="\D" Width="28" Height="24" Margin="0,0,3,3" Click="RegexCharacterButton_Click" ToolTip="Non-digit character (\D)"/>
+                        <Button x:Name="WhitespaceButton" Content="\s" Tag="\s" Width="28" Height="24" Margin="0,0,3,3" Click="RegexCharacterButton_Click" ToolTip="Whitespace character (\s)"/>
+                        <Button x:Name="NonWhitespaceButton" Content="\S" Tag="\S" Width="28" Height="24" Margin="0,0,3,3" Click="RegexCharacterButton_Click" ToolTip="Non-whitespace character (\S)"/>
+                        <Button x:Name="WordBoundaryButton" Content="\b" Tag="\b" Width="28" Height="24" Margin="0,0,8,3" Click="RegexCharacterButton_Click" ToolTip="Word boundary (\b)"/>
+
+                        <Button x:Name="PeriodButton" Content="." Tag="." Width="26" Height="24" Margin="0,0,3,3" Click="RegexCharacterButton_Click" ToolTip="Any character except newline (.)"/>
+                        <Button x:Name="PlusSignButton" Content="+" Tag="+" Width="26" Height="24" Margin="0,0,3,3" Click="RegexCharacterButton_Click" ToolTip="One or more times (+)"/>
+                        <Button x:Name="AsteriskButton" Content="*" Tag="*" Width="26" Height="24" Margin="0,0,8,3" Click="RegexCharacterButton_Click" ToolTip="Zero or more times (*)"/>
+
+                        <Button x:Name="CharClassButton" Content="[a-z]" Tag="[a-z]" Padding="5,0" Height="24" Margin="0,0,3,3" Click="RegexCharacterButton_Click" ToolTip="Character range/set ([a-z])"/>
+                        <Button x:Name="NegatedCharClassButton" Content="[^...]" Tag="[^]" Padding="5,0" Height="24" Margin="0,0,8,3" Click="RegexCharacterButton_Click" ToolTip="Negated character class ([^...])"/>
+
+                        <Button x:Name="GroupButton" Content="(...)" Tag="()" Padding="5,0" Height="24" Margin="0,0,3,3" Click="RegexCharacterButton_Click" ToolTip="Capturing group (...) — wraps selected text"/>
+                        <Button x:Name="NonCapturingGroupButton" Content="(?:...)" Tag="(?:)" Padding="5,0" Height="24" Margin="0,0,3,3" Click="RegexCharacterButton_Click" ToolTip="Non-capturing group (?:...) — wraps selected text"/>
+                        <Button x:Name="NamedGroupButton" Content="(?&lt;n&gt;)" Tag="(?&lt;name&gt;)" Padding="5,0" Height="24" Margin="0,0,3,3" Click="RegexCharacterButton_Click" ToolTip="Named capturing group (?&lt;name&gt;...) — wraps selected text"/>
+                        <Button x:Name="LookaheadButton" Content="(?=...)" Tag="(?=)" Padding="5,0" Height="24" Margin="0,0,3,3" Click="RegexCharacterButton_Click" ToolTip="Positive lookahead (?=...)"/>
+                        <Button x:Name="LookbehindButton" Content="(?&lt;=...)" Tag="(?&lt;=)" Padding="5,0" Height="24" Margin="0,0,8,3" Click="RegexCharacterButton_Click" ToolTip="Positive lookbehind (?&lt;=...)"/>
+                    </WrapPanel>
+
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button x:Name="CopyCSharpButton" Content="Copy as C#" Height="24" Padding="8,0" Margin="0,0,6,3" Click="CopyCSharpButton_Click" ToolTip="Copy ready-to-use C# [GeneratedRegex] and Regex code to clipboard"/>
+                        <Button x:Name="ClearAllButton" Content="Clear All" Height="24" Padding="8,0" Margin="0,0,0,3" Click="ClearAllButton_Click" ToolTip="Clear expression, inputs, results, and reset all options"/>
+                    </StackPanel>
+                </DockPanel>
+
+                <!-- Regular Expression Input with Native Watermark -->
+                <Grid Grid.Row="1">
+                    <TextBox x:Name="ExpressionTextBox"
+                             Height="68"
+                             TextWrapping="Wrap"
+                             AcceptsReturn="True"
+                             TextChanged="TextBox_TextChanged"
+                             VerticalScrollBarVisibility="Auto"
+                             FontFamily="Consolas"
+                             FontSize="14"
+                             Padding="4"/>
+                    <TextBlock Text="Enter Regular Expression Here"
+                               Margin="8,6,0,0"
+                               VerticalAlignment="Top"
+                               HorizontalAlignment="Left"
+                               Foreground="Gray"
+                               FontFamily="Consolas"
+                               FontSize="14"
+                               IsHitTestVisible="False">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Text, ElementName=ExpressionTextBox}" Value="">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
+
+                <!-- Saved Expressions / Pattern History Bar -->
+                <Grid Grid.Row="2" Margin="0,6,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Saved Patterns:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ComboBox x:Name="SavedExpressionsComboBox"
+                              Grid.Column="1"
+                              Height="24"
+                              FontFamily="Consolas"
+                              SelectionChanged="SavedExpressionsComboBox_SelectionChanged"
+                              ToolTip="Select a saved regular expression to load it"/>
+                    <Button x:Name="SaveExpressionButton"
+                            Grid.Column="2"
+                            Content="Save Pattern"
+                            Height="24"
+                            Padding="8,0"
+                            Margin="6,0,0,0"
+                            Click="SaveExpressionButton_Click"
+                            ToolTip="Save current expression to the saved patterns list"/>
+                    <Button x:Name="RemoveSavedExpressionButton"
+                            Grid.Column="3"
+                            Content="Remove"
+                            Height="24"
+                            Padding="8,0"
+                            Margin="6,0,0,0"
+                            Click="RemoveSavedExpressionButton_Click"
+                            ToolTip="Remove selected pattern from saved patterns"/>
+                </Grid>
+            </Grid>
+
+            <!-- Right side of top panel: RegexOptions GroupBox -->
+            <GroupBox Grid.Column="1" Header="Regex Options" Padding="8,6">
+                <UniformGrid Rows="4" Columns="3">
+                    <CheckBox x:Name="IgnoreCaseCheckBox" Content="IgnoreCase" Margin="0,2,12,2" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
+                    <CheckBox x:Name="ExplicitCaptureCheckBox" Content="ExplicitCapture" Margin="0,2,12,2" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
+                    <CheckBox x:Name="RightToLeftCheckBox" Content="RightToLeft" Margin="0,2,0,2" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
+
+                    <CheckBox x:Name="SinglelineCheckBox" Content="Singleline" Margin="0,2,12,2" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
+                    <CheckBox x:Name="ECMAScriptCheckBox" Content="ECMAScript" Margin="0,2,12,2" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
+                    <CheckBox x:Name="CompiledCheckBox" Content="Compiled" Margin="0,2,0,2" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
+
+                    <CheckBox x:Name="MultilineCheckBox" Content="Multiline" Margin="0,2,12,2" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
+                    <CheckBox x:Name="CultureInvariantCheckBox" Content="CultureInvariant" Margin="0,2,12,2" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
+                    <CheckBox x:Name="IgnorePatternWhitespace" Content="IgnorePatternWhitespace" Margin="0,2,0,2" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
+
+                    <CheckBox x:Name="NonBacktrackingCheckBox" Content="NonBacktracking" Margin="0,2,12,2" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged" ToolTip="Guarantees linear-time matching in .NET 7+ (incompatible with RightToLeft and ECMAScript)"/>
+                </UniformGrid>
+            </GroupBox>
+        </Grid>
+
+        <!-- Main Content Area: Resizable Split View -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1*" MinWidth="320"/>
+                <ColumnDefinition Width="8"/>
+                <ColumnDefinition Width="1.15*" MinWidth="360"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left Column: Test Data, Replacement Text, Replacement Results -->
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="2*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="1.2*"/>
+                </Grid.RowDefinitions>
+
+                <Label x:Name="TestDataLabel" Grid.Row="0" Content="Test Data" Padding="0,2,0,4" FontWeight="Bold"/>
+                <AdornerDecorator Grid.Row="1">
+                    <TextBox x:Name="DataTextBox"
+                             TextWrapping="Wrap"
+                             TextChanged="TextBox_TextChanged"
+                             AcceptsReturn="True"
+                             HorizontalScrollBarVisibility="Auto"
+                             VerticalScrollBarVisibility="Auto"
+                             FontFamily="Consolas"
+                             FontSize="14"
+                             Padding="4"/>
+                </AdornerDecorator>
+
+                <Label x:Name="ReplacementTextLabel" Grid.Row="2" Content="Replacement Text" Padding="0,8,0,4" FontWeight="Bold"/>
+                <TextBox x:Name="ReplacementTextTextBox"
+                         Grid.Row="3"
+                         Height="56"
+                         TextWrapping="Wrap"
+                         AcceptsReturn="True"
+                         TextChanged="TextBox_TextChanged"
+                         VerticalScrollBarVisibility="Auto"
+                         FontFamily="Consolas"
+                         FontSize="14"
+                         Padding="4"/>
+
+                <Label x:Name="ReplacementResultsLabel" Grid.Row="4" Content="Replacement Results" Padding="0,8,0,4" FontWeight="Bold"/>
+                <TextBox x:Name="ReplacementResultsTextBox"
+                         Grid.Row="5"
+                         TextWrapping="Wrap"
+                         AcceptsReturn="True"
+                         VerticalScrollBarVisibility="Auto"
+                         FontFamily="Consolas"
+                         FontSize="14"
+                         Padding="4"
+                         IsReadOnly="True"/>
+            </Grid>
+
+            <!-- Resizable GridSplitter -->
+            <GridSplitter Grid.Column="1"
+                          Width="8"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          Background="Transparent"
+                          ShowsPreview="True"/>
+
+            <!-- Right Column: Match Results, Split Results, and C# Code Snippet -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <DockPanel Grid.Row="0" Margin="0,0,0,4">
+                    <Label x:Name="MatchResultsLabel" DockPanel.Dock="Left" Content="Match Results" Padding="0,2,12,2" FontWeight="Bold" VerticalAlignment="Center"/>
+                    <CheckBox x:Name="ExpandCapturesCheckBox" DockPanel.Dock="Left" Content="Expand Captures" Margin="0,0,12,0" VerticalAlignment="Center" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
+                    <CheckBox x:Name="ExpandGroupsCheckBox" DockPanel.Dock="Left" Content="Expand Groups" Margin="0,0,12,0" VerticalAlignment="Center" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
+                    <TextBlock x:Name="MatchSummaryTextBlock"
+                               DockPanel.Dock="Right"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Center"
+                               Foreground="#1565C0"
+                               FontWeight="SemiBold"/>
+                </DockPanel>
+
+                <TabControl Grid.Row="1">
+                    <TabItem Header="Matches &amp; Groups">
+                        <TreeView x:Name="MatchesTreeView"
+                                  FontFamily="Consolas"
+                                  FontSize="13.5"
+                                  SelectedItemChanged="MatchesTreeView_SelectedItemChanged"/>
+                    </TabItem>
+                    <TabItem Header="Regex.Split Results">
+                        <ListBox x:Name="SplitResultsListBox"
+                                 FontFamily="Consolas"
+                                 FontSize="13.5"/>
+                    </TabItem>
+                    <TabItem Header="C# Code ([GeneratedRegex])">
+                        <TextBox x:Name="CSharpSnippetTextBox"
+                                 FontFamily="Consolas"
+                                 FontSize="13"
+                                 IsReadOnly="True"
+                                 TextWrapping="NoWrap"
+                                 AcceptsReturn="True"
+                                 HorizontalScrollBarVisibility="Auto"
+                                 VerticalScrollBarVisibility="Auto"
+                                 Padding="6"/>
+                    </TabItem>
+                </TabControl>
+            </Grid>
+        </Grid>
+
+        <!-- Bottom Status & Action Bar -->
+        <Grid Grid.Row="2" Margin="0,10,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock x:Name="StatusTextBlock"
+                       Grid.Column="0"
+                       VerticalAlignment="Center"
+                       Foreground="#555555"
+                       Text="Ready"/>
+
+            <Button x:Name="SaveAndExitButton"
+                    Grid.Column="1"
+                    Content="Save and Exit"
+                    Height="26"
+                    Width="110"
+                    Click="SaveAndExitButton_Click"/>
+        </Grid>
     </Grid>
 </Window>
