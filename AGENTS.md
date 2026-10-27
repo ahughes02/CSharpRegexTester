@@ -18,11 +18,12 @@ This document defines the architecture, coding standards, and workflow expectati
 The codebase separates pure domain/business logic from WPF UI concerns so that logic remains small, cohesive, and testable:
 
 - **`Models/` (`namespace CSharpRegexTester.Models`)**
-  - Contains immutable data records (`RegexEvaluationResult`, `MatchSnapshot`, `GroupSnapshot`, `CaptureSnapshot`, `TextSpan`) and serializable DTOs (`AppSettings`).
+  - Contains immutable data records (`RegexEvaluationResult`, `MatchSnapshot`, `GroupSnapshot`, `CaptureSnapshot`, `TextSpan`, `RegexDisplayModel`, `MatchTreeNode`, `MatchTreeNodeType`) and serializable DTOs (`AppSettings`).
   - **Rule**: Models must not depend on `System.Windows.*` (WPF) or perform I/O.
 - **`Services/` (`namespace CSharpRegexTester.Services`)**
   - Contains stateless, pure C# domain and application services:
     - `RegexEvaluatorService`: Executes `Regex.Matches`, `Regex.Replace`, and `Regex.Split` with a timeout (`DefaultTimeout`) and `Stopwatch` timing. Returns immutable `RegexEvaluationResult` snapshots safe to pass across threads.
+    - `RegexPresentationService`: Builds display-ready `RegexDisplayModel` instances, formatted split strings, status summaries, and `MatchTreeNode` hierarchy graphs completely on background threads.
     - `CSharpCodeGenerator`: Produces C# code strings for `[GeneratedRegex]` and runtime `Regex` usage.
     - `RegexTokenInserter`: Computes updated expression strings and caret positions when inserting or wrapping regex tokens.
     - `SettingsService`: Reads and writes `AppSettings` as JSON in `%LocalAppData%\CSharpRegexTester\RegExTester.cfg` (with local directory fallback).

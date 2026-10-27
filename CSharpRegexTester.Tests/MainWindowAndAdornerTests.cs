@@ -152,7 +152,7 @@ public class MainWindowAndAdornerTests
             InvokePrivate(window, "DisplayResults", matchResult);
 
             Assert.Single(window.MatchesTreeView.Items);
-            var rootItem = Assert.IsType<TreeViewItem>(window.MatchesTreeView.Items[0]);
+            var rootItem = Assert.IsType<MatchTreeNode>(window.MatchesTreeView.Items[0]);
             Assert.Equal("Matches (2)", rootItem.Header);
             Assert.Equal("[Hello] [123]", window.ReplacementResultsTextBox.Text);
 
@@ -169,10 +169,10 @@ public class MainWindowAndAdornerTests
             }
             var largeResult = new RegexEvaluationResult(manyMatches, "replaced", manySplits, TimeSpan.FromMilliseconds(10));
             InvokePrivate(window, "DisplayResults", largeResult);
-            Assert.Contains("showing first", ((TreeViewItem)window.MatchesTreeView.Items[0]).Header.ToString()!);
+            Assert.Contains("showing first", ((MatchTreeNode)window.MatchesTreeView.Items[0]).Header);
 
-            // Select a match TreeViewItem to trigger MatchesTreeView_SelectedItemChanged
-            var firstMatchItem = Assert.IsType<TreeViewItem>(rootItem.Items[0]);
+            // Select a match MatchTreeNode to trigger MatchesTreeView_SelectedItemChanged
+            var firstMatchItem = rootItem.Children[0];
             InvokePrivate(
                 window,
                 "MatchesTreeView_SelectedItemChanged",
@@ -180,7 +180,7 @@ public class MainWindowAndAdornerTests
                 new RoutedPropertyChangedEventArgs<object>(null!, firstMatchItem));
             Assert.Contains("Selected span:", window.StatusTextBlock.Text);
 
-            // Select an item without a TextSpan Tag
+            // Select an item without a TextSpan
             InvokePrivate(
                 window,
                 "MatchesTreeView_SelectedItemChanged",
@@ -211,7 +211,7 @@ public class MainWindowAndAdornerTests
                 "",
                 RegexOptions.None);
             InvokePrivate(window, "DisplayResults", emptyResult);
-            Assert.Equal("No Matches", window.MatchesTreeView.Items[0]);
+            Assert.Equal("No Matches", ((MatchTreeNode)window.MatchesTreeView.Items[0]).Header);
 
             // Test Checkbox_CheckChanged when stopWork is false
             InvokePrivate(window, "Checkbox_CheckChanged", window.IgnoreCaseCheckBox, new RoutedEventArgs());
@@ -295,7 +295,16 @@ public class MainWindowAndAdornerTests
 
     private static object? InvokePrivate(object target, string methodName, params object[] args)
     {
-        MethodInfo? method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
+        Type[] paramTypes = args.Select(a => a?.GetType() ?? typeof(object)).ToArray();
+        MethodInfo? method = target.GetType().GetMethod(
+            methodName,
+            BindingFlags.Instance | BindingFlags.NonPublic,
+            paramTypes);
+
+        method ??= target.GetType()
+            .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
+            .FirstOrDefault(m => m.Name == methodName && m.GetParameters().Length == args.Length);
+
         Assert.NotNull(method);
         return method.Invoke(target, args);
     }

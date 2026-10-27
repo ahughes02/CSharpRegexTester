@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:CSharpRegexTester"
+        xmlns:models="clr-namespace:CSharpRegexTester.Models"
         mc:Ignorable="d"
         Title="C# Regex Tester (.NET 10)"
         Height="720"
@@ -258,7 +259,20 @@
                         <TreeView x:Name="MatchesTreeView"
                                   FontFamily="Consolas"
                                   FontSize="13.5"
-                                  SelectedItemChanged="MatchesTreeView_SelectedItemChanged"/>
+                                  VirtualizingStackPanel.IsVirtualizing="True"
+                                  VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                  SelectedItemChanged="MatchesTreeView_SelectedItemChanged">
+                            <TreeView.Resources>
+                                <HierarchicalDataTemplate DataType="{x:Type models:MatchTreeNode}" ItemsSource="{Binding Children}">
+                                    <TextBlock Text="{Binding Header}"/>
+                                </HierarchicalDataTemplate>
+                            </TreeView.Resources>
+                            <TreeView.ItemContainerStyle>
+                                <Style TargetType="TreeViewItem">
+                                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                                </Style>
+                            </TreeView.ItemContainerStyle>
+                        </TreeView>
                     </TabItem>
                     <TabItem Header="Regex.Split Results">
                         <ListBox x:Name="SplitResultsListBox"

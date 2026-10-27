@@ -15,8 +15,8 @@ namespace CSharpRegexTester;
 /// </summary>
 public partial class MainWindow : Window
 {
-    public const int MaxTreeMatches = 1000;
-    public const int MaxSplitDisplayItems = 1000;
+    public const int MaxTreeMatches = RegexPresentationService.MaxTreeMatches;
+    public const int MaxSplitDisplayItems = RegexPresentationService.MaxSplitDisplayItems;
 
     private readonly (CheckBox CheckBox, RegexOptions Option)[] optionMappings;
     private readonly List<string> savedExpressions = [];
@@ -102,9 +102,9 @@ public partial class MainWindow : Window
             return;
         }
 
-        UpdateCSharpSnippet();
-
-        // Debounce evaluation so pasting large text or typing rapidly does not block the UI
+        // Debounce evaluation so pasting large text or typing rapidly does not block the UI.
+        // C# snippet generation, split parsing, and tree hierarchy construction are offloaded
+        // to background worker threads.
         debounceTimer.Stop();
         debounceTimer.Start();
     }
@@ -131,13 +131,12 @@ public partial class MainWindow : Window
             return;
         }
 
-        UpdateCSharpSnippet();
         _ = SetupAndRunRegexWorkerAsync();
     }
 
     private void UpdateTreeExpansionInPlace()
     {
-        if (MatchesTreeView.Items.Count == 0 || MatchesTreeView.Items[0] is not TreeViewItem rootItem)
+        if (MatchesTreeView.ItemsSource is not IReadOnlyList<MatchTreeNode> roots || roots.Count == 0)
         {
             return;
         }
@@ -145,18 +144,7 @@ public partial class MainWindow : Window
         bool expandCaptures = ExpandCapturesCheckBox.IsChecked == true;
         bool expandGroups = ExpandGroupsCheckBox.IsChecked == true;
 
-        foreach (TreeViewItem matchItem in rootItem.Items.OfType<TreeViewItem>())
-        {
-            if (matchItem.Items.Count >= 1 && matchItem.Items[0] is TreeViewItem capturesItem)
-            {
-                capturesItem.IsExpanded = expandCaptures;
-            }
-
-            if (matchItem.Items.Count >= 2 && matchItem.Items[1] is TreeViewItem groupsItem)
-            {
-                groupsItem.IsExpanded = expandGroups;
-            }
-        }
+        RegexPresentationService.UpdateExpansion(roots, expandCaptures, expandGroups);
     }
 
     private void ClearAllButton_Click(object sender, RoutedEventArgs e)
@@ -175,7 +163,7 @@ public partial class MainWindow : Window
         ExpandGroupsCheckBox.IsChecked = false;
 
         ClearResultsDisplay("Cleared all inputs and options.");
-        UpdateCSharpSnippet();
+        CSharpSnippetTextBox.Text = string.Empty;
 
         stopWork = false;
     }
@@ -349,177 +337,91 @@ public partial class MainWindow : Window
         string testData = DataTextBox.Text;
         string replacementText = ReplacementTextTextBox.Text;
         RegexOptions options = GetSelectedRegexOptions();
+        bool expandCaptures = ExpandCapturesCheckBox.IsChecked == true;
+        bool expandGroups = ExpandGroupsCheckBox.IsChecked == true;
 
         if (string.IsNullOrEmpty(expression) || string.IsNullOrEmpty(testData))
         {
             ClearResultsDisplay("Enter both a regular expression and test data to evaluate.");
+            if (!string.IsNullOrEmpty(expression))
+            {
+                CSharpSnippetTextBox.Text = CSharpCodeGenerator.GenerateSnippet(expression, replacementText, options);
+            }
             return;
         }
 
-        MatchesTreeView.Items.Clear();
-        MatchesTreeView.Items.Add("Working...");
-        StatusTextBlock.Text = "Evaluating regular expression...";
-        highlightAdorner?.UpdateHighlights([]);
+        DisplayResults(RegexPresentationService.CreateLoadingModel());
 
         try
         {
-            RegexEvaluationResult result = await Task.Run(
-                () => RegexEvaluatorService.Evaluate(expression, testData, replacementText, options, token),
-                token);
+            RegexDisplayModel displayModel = await Task.Run(() =>
+            {
+                token.ThrowIfCancellationRequested();
+                try
+                {
+                    RegexEvaluationResult evalResult = RegexEvaluatorService.Evaluate(
+                        expression, testData, replacementText, options, token);
+                    token.ThrowIfCancellationRequested();
+                    return RegexPresentationService.BuildModel(
+                        evalResult, expression, replacementText, options, expandCaptures, expandGroups, token);
+                }
+                catch (RegexMatchTimeoutException timeoutEx)
+                {
+                    return RegexPresentationService.CreateTimeoutModel(timeoutEx, expression, replacementText, options);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    return RegexPresentationService.CreateExceptionModel(ex, expression, replacementText, options);
+                }
+            }, token);
 
             if (token.IsCancellationRequested || !ReferenceEquals(regexWorkCts, cts))
             {
                 return;
             }
 
-            DisplayResults(result);
+            DisplayResults(displayModel);
         }
         catch (OperationCanceledException)
         {
             // Cancelled by a newer input change.
         }
-        catch (RegexMatchTimeoutException timeoutEx)
-        {
-            if (!token.IsCancellationRequested && ReferenceEquals(regexWorkCts, cts))
-            {
-                DisplayTimeoutException(timeoutEx);
-            }
-        }
-        catch (Exception ex)
-        {
-            if (!token.IsCancellationRequested && ReferenceEquals(regexWorkCts, cts))
-            {
-                DisplayException(ex);
-            }
-        }
     }
 
     private void ClearResultsDisplay(string statusMessage)
     {
-        MatchesTreeView.Items.Clear();
-        ReplacementResultsTextBox.Text = string.Empty;
-        SplitResultsListBox.ItemsSource = null;
-        MatchSummaryTextBlock.Text = string.Empty;
-        StatusTextBlock.Text = statusMessage;
-        highlightAdorner?.UpdateHighlights([]);
+        DisplayResults(RegexPresentationService.CreateEmptyModel(statusMessage));
+    }
+
+    private void DisplayResults(RegexDisplayModel model)
+    {
+        MatchesTreeView.ItemsSource = model.TreeNodes;
+        SplitResultsListBox.ItemsSource = model.FormattedSplitResults;
+        ReplacementResultsTextBox.Text = model.ReplacementResults;
+        MatchSummaryTextBlock.Text = model.MatchSummary;
+        StatusTextBlock.Text = model.StatusMessage;
+        if (!string.IsNullOrEmpty(model.CSharpSnippet))
+        {
+            CSharpSnippetTextBox.Text = model.CSharpSnippet;
+        }
+        highlightAdorner?.UpdateHighlights(model.HighlightSpans);
     }
 
     private void DisplayResults(RegexEvaluationResult result)
     {
-        int splitCount = Math.Min(result.SplitResults.Count, MaxSplitDisplayItems);
-        var formattedSplits = new List<string>(splitCount + (result.SplitResults.Count > MaxSplitDisplayItems ? 1 : 0));
-        for (int i = 0; i < splitCount; i++)
-        {
-            string part = result.SplitResults[i];
-            formattedSplits.Add($"[{i}] \"{part}\" ({part.Length} chars)");
-        }
-        if (result.SplitResults.Count > MaxSplitDisplayItems)
-        {
-            formattedSplits.Add($"... and {result.SplitResults.Count - MaxSplitDisplayItems:N0} more split items.");
-        }
-        SplitResultsListBox.ItemsSource = formattedSplits;
-
-        double elapsedMs = result.Elapsed.TotalMilliseconds;
-
-        if (result.Matches.Count > 0)
-        {
-            string rootHeader = result.Matches.Count > MaxTreeMatches
-                ? $"Matches ({result.Matches.Count:N0} total, showing first {MaxTreeMatches:N0})"
-                : $"Matches ({result.Matches.Count:N0})";
-            var matchesTreeItem = new TreeViewItem { Header = rootHeader };
-
-            int treeDisplayCount = Math.Min(result.Matches.Count, MaxTreeMatches);
-            var highlightSpans = new List<TextSpan>(result.Matches.Count);
-
-            for (int i = 0; i < result.Matches.Count; i++)
-            {
-                MatchSnapshot match = result.Matches[i];
-                highlightSpans.Add(match.Span);
-
-                if (i < treeDisplayCount)
-                {
-                    var matchTreeItem = new TreeViewItem
-                    {
-                        Header = $"[{i}] - [{match.Value}] (Index: {match.Index}, Length: {match.Length})",
-                        Tag = match.Span
-                    };
-                    matchesTreeItem.Items.Add(matchTreeItem);
-
-                    // Captures
-                    var capturesTreeItem = new TreeViewItem
-                    {
-                        Header = $"Captures ({match.Captures.Count})",
-                        IsExpanded = ExpandCapturesCheckBox.IsChecked == true
-                    };
-                    matchTreeItem.Items.Add(capturesTreeItem);
-                    for (int j = 0; j < match.Captures.Count; j++)
-                    {
-                        CaptureSnapshot capture = match.Captures[j];
-                        capturesTreeItem.Items.Add(new TreeViewItem
-                        {
-                            Header = $"[{j}] - [{capture.Value}] (Index: {capture.Index}, Length: {capture.Length})",
-                            Tag = capture.Span
-                        });
-                    }
-
-                    // Groups
-                    var groupsTreeItem = new TreeViewItem
-                    {
-                        Header = $"Groups ({match.Groups.Count})",
-                        IsExpanded = ExpandGroupsCheckBox.IsChecked == true
-                    };
-                    matchTreeItem.Items.Add(groupsTreeItem);
-                    for (int j = 0; j < match.Groups.Count; j++)
-                    {
-                        GroupSnapshot group = match.Groups[j];
-                        string header = group.Success
-                            ? $"[{group.Number}]{group.Name} - [{group.Value}] (Index: {group.Index}, Length: {group.Length})"
-                            : $"[{group.Number}]{group.Name} - <not matched>";
-
-                        groupsTreeItem.Items.Add(new TreeViewItem
-                        {
-                            Header = header,
-                            Tag = group.Span
-                        });
-                    }
-
-                    matchTreeItem.IsExpanded = true;
-                }
-            }
-
-            if (result.Matches.Count > MaxTreeMatches)
-            {
-                matchesTreeItem.Items.Add(new TreeViewItem
-                {
-                    Header = $"... {result.Matches.Count - MaxTreeMatches:N0} additional matches not shown in tree for performance."
-                });
-            }
-
-            matchesTreeItem.IsExpanded = true;
-
-            MatchesTreeView.Items.Clear();
-            MatchesTreeView.Items.Add(matchesTreeItem);
-            ReplacementResultsTextBox.Text = result.ReplacementResults;
-
-            string matchLabel = result.Matches.Count == 1 ? "1 match" : $"{result.Matches.Count:N0} matches";
-            MatchSummaryTextBlock.Text = $"{matchLabel} ({elapsedMs:F2} ms)";
-            StatusTextBlock.Text = $"Found {matchLabel} and {result.SplitResults.Count:N0} split segment(s) in {elapsedMs:F2} ms. Click any match/group in the tree to locate it.";
-            highlightAdorner?.UpdateHighlights(highlightSpans);
-        }
-        else
-        {
-            MatchesTreeView.Items.Clear();
-            MatchesTreeView.Items.Add("No Matches");
-            ReplacementResultsTextBox.Text = string.Empty;
-            MatchSummaryTextBlock.Text = $"0 matches ({elapsedMs:F2} ms)";
-            StatusTextBlock.Text = $"No matches found ({elapsedMs:F2} ms).";
-            highlightAdorner?.UpdateHighlights([]);
-        }
+        RegexDisplayModel model = RegexPresentationService.BuildModel(
+            result,
+            ExpressionTextBox.Text,
+            ReplacementTextTextBox.Text,
+            GetSelectedRegexOptions(),
+            ExpandCapturesCheckBox.IsChecked == true,
+            ExpandGroupsCheckBox.IsChecked == true);
+        DisplayResults(model);
     }
 
     private void MatchesTreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
     {
-        if (e.NewValue is TreeViewItem { Tag: TextSpan span } &&
+        if (e.NewValue is MatchTreeNode { Span: { } span } &&
             span.Index >= 0 &&
             span.Index + span.Length <= DataTextBox.Text.Length)
         {
@@ -539,32 +441,22 @@ public partial class MainWindow : Window
 
     private void DisplayTimeoutException(RegexMatchTimeoutException ex)
     {
-        MatchesTreeView.Items.Clear();
-
-        var treeItem = new TreeViewItem { Header = "Regex Timeout (Catastrophic Backtracking Protection)" };
-        treeItem.Items.Add(new TreeViewItem { Header = $"Timed out after {ex.MatchTimeout.TotalSeconds:F1}s." });
-        treeItem.Items.Add(new TreeViewItem { Header = "Tip: Try enabling 'NonBacktracking' or simplifying nested quantifiers." });
-        treeItem.IsExpanded = true;
-
-        MatchesTreeView.Items.Add(treeItem);
-        MatchSummaryTextBlock.Text = "Timed out";
-        StatusTextBlock.Text = $"Regex evaluation timed out after {ex.MatchTimeout.TotalSeconds:F1} seconds.";
-        highlightAdorner?.UpdateHighlights([]);
+        RegexDisplayModel model = RegexPresentationService.CreateTimeoutModel(
+            ex,
+            ExpressionTextBox.Text,
+            ReplacementTextTextBox.Text,
+            GetSelectedRegexOptions());
+        DisplayResults(model);
     }
 
     private void DisplayException(Exception ex)
     {
-        MatchesTreeView.Items.Clear();
-
-        var treeItem = new TreeViewItem { Header = "Exception" };
-        treeItem.Items.Add(new TreeViewItem { Header = $"Message: {ex.Message}" });
-        treeItem.Items.Add(new TreeViewItem { Header = $"Source: {ex.Source}" });
-        treeItem.IsExpanded = true;
-
-        MatchesTreeView.Items.Add(treeItem);
-        MatchSummaryTextBlock.Text = "Invalid Pattern";
-        StatusTextBlock.Text = $"Error: {ex.Message}";
-        highlightAdorner?.UpdateHighlights([]);
+        RegexDisplayModel model = RegexPresentationService.CreateExceptionModel(
+            ex,
+            ExpressionTextBox.Text,
+            ReplacementTextTextBox.Text,
+            GetSelectedRegexOptions());
+        DisplayResults(model);
     }
 
     private void UpdateCSharpSnippet()

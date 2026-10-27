@@ -77,11 +77,14 @@ CSharpRegexTester/
 │   └── RegexMatchHighlightAdorner.cs  # Custom WPF Adorner rendering inline match highlights
 ├── Models/
 │   ├── AppSettings.cs                 # Persisted user settings & history model
+│   ├── MatchTreeNode.cs               # Decoupled tree node model for background hierarchy building
+│   ├── RegexDisplayModel.cs           # Pre-formatted display model for zero-overhead UI updates
 │   ├── RegexEvaluationResult.cs       # Immutable snapshots for matches, groups, and captures
 │   └── TextSpan.cs                    # Character index and length value type
 ├── Services/
 │   ├── CSharpCodeGenerator.cs         # Generates [GeneratedRegex] and runtime C# code snippets
 │   ├── RegexEvaluatorService.cs       # Executes Regex match/replace/split with timeout & timing
+│   ├── RegexPresentationService.cs    # Background formatting of display models, splits, & trees
 │   ├── RegexTokenInserter.cs          # Caret-aware token insertion and selection wrapping
 │   └── SettingsService.cs             # JSON persistence to %LocalAppData%
 ├── CSharpRegexTester.Tests/           # xUnit test suite covering Models, Services, Controls, and UI
