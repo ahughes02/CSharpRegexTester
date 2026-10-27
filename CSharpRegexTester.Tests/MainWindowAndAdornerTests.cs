@@ -61,11 +61,26 @@ public class MainWindowAndAdornerTests
                 Height = 120,
                 Text = "First line\r\nSecond line with text"
             };
+            textBox.ApplyTemplate();
             textBox.Measure(new Size(300, 120));
             textBox.Arrange(new Rect(0, 0, 300, 120));
             textBox.UpdateLayout();
 
-            var adorner = new RegexMatchHighlightAdorner(textBox);
+            var adorner = new RegexMatchHighlightAdorner(
+                textBox,
+                (charIndex, trailing) =>
+                {
+                    if (charIndex == 11)
+                    {
+                        return Rect.Empty;
+                    }
+
+                    int line = charIndex < 12 ? 0 : 1;
+                    int col = line == 0 ? charIndex : charIndex - 12;
+                    double x = col * 8 + (trailing ? 8 : 0);
+                    double y = line * 20;
+                    return new Rect(x, y, 1, 16);
+                });
             adorner.Measure(new Size(300, 120));
             adorner.Arrange(new Rect(0, 0, 300, 120));
 

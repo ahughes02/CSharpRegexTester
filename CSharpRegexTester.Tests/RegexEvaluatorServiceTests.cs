@@ -86,4 +86,20 @@ public class RegexEvaluatorServiceTests
         Assert.ThrowsAny<ArgumentException>(() =>
             RegexEvaluatorService.Evaluate("[unclosed", "input", "", RegexOptions.None));
     }
+
+    [Fact]
+    public void Evaluate_WithCatastrophicBacktrackingAndShortTimeout_ThrowsRegexMatchTimeoutException()
+    {
+        string backtrackingPattern = @"(a+)+b";
+        string evilInput = new string('a', 40) + "c";
+
+        Assert.Throws<RegexMatchTimeoutException>(() =>
+            RegexEvaluatorService.Evaluate(
+                backtrackingPattern,
+                evilInput,
+                string.Empty,
+                RegexOptions.None,
+                CancellationToken.None,
+                TimeSpan.FromMilliseconds(1)));
+    }
 }

@@ -17,6 +17,7 @@ public sealed class RegexMatchHighlightAdorner : Adorner
     private static readonly Pen SelectedMatchBorderPen;
 
     private readonly TextBox textBox;
+    private readonly Func<int, bool, Rect> getCharacterRect;
     private IReadOnlyList<TextSpan> matchSpans = [];
     private TextSpan? selectedSpan;
 
@@ -41,10 +42,13 @@ public sealed class RegexMatchHighlightAdorner : Adorner
         SelectedMatchBorderPen.Freeze();
     }
 
-    public RegexMatchHighlightAdorner(TextBox adornedTextBox)
+    public RegexMatchHighlightAdorner(
+        TextBox adornedTextBox,
+        Func<int, bool, Rect>? characterRectProvider = null)
         : base(adornedTextBox)
     {
         textBox = adornedTextBox;
+        getCharacterRect = characterRectProvider ?? textBox.GetRectFromCharacterIndex;
         IsHitTestVisible = false;
 
         textBox.SizeChanged += (_, _) => InvalidateVisual();
@@ -107,8 +111,8 @@ public sealed class RegexMatchHighlightAdorner : Adorner
         int startIndex = span.Index;
         int endIndex = span.Index + span.Length;
 
-        Rect startRect = textBox.GetRectFromCharacterIndex(startIndex, trailingEdge: false);
-        Rect endRect = textBox.GetRectFromCharacterIndex(endIndex - 1, trailingEdge: true);
+        Rect startRect = getCharacterRect(startIndex, false);
+        Rect endRect = getCharacterRect(endIndex - 1, true);
 
         if (startRect.IsEmpty || endRect.IsEmpty)
         {
@@ -130,8 +134,8 @@ public sealed class RegexMatchHighlightAdorner : Adorner
         Rect currentLineRect = startRect;
         for (int i = startIndex; i < endIndex; i++)
         {
-            Rect charStart = textBox.GetRectFromCharacterIndex(i, trailingEdge: false);
-            Rect charEnd = textBox.GetRectFromCharacterIndex(i, trailingEdge: true);
+            Rect charStart = getCharacterRect(i, false);
+            Rect charEnd = getCharacterRect(i, true);
             if (charStart.IsEmpty || charEnd.IsEmpty)
             {
                 continue;

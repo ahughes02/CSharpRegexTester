@@ -16,7 +16,8 @@ public static class RegexEvaluatorService
         string input,
         string? replacement,
         RegexOptions options,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        TimeSpan? matchTimeout = null)
     {
         ArgumentNullException.ThrowIfNull(pattern);
         ArgumentNullException.ThrowIfNull(input);
@@ -26,7 +27,7 @@ public static class RegexEvaluatorService
         long startTimestamp = Stopwatch.GetTimestamp();
 
         string replaceWith = replacement ?? string.Empty;
-        var regex = new Regex(pattern, options, DefaultTimeout);
+        var regex = new Regex(pattern, options, matchTimeout ?? DefaultTimeout);
         MatchCollection matches = regex.Matches(input);
 
         var matchSnapshots = new List<MatchSnapshot>();
