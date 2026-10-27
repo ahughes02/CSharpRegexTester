@@ -64,7 +64,7 @@ public class RegexEvaluatorServiceTests
         RegexEvaluationResult result = RegexEvaluatorService.Evaluate(
             @",\s*",
             "alpha, beta,  gamma",
-            null!,
+            null,
             RegexOptions.None);
 
         Assert.Equal(["alpha", "beta", "gamma"], result.SplitResults);

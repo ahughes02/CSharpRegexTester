@@ -82,7 +82,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Text Changed Handler for ExpressionTextBox, DataTextBox and, ReplacementTextTextBox
+    /// Text Changed Handler for ExpressionTextBox, DataTextBox, and ReplacementTextTextBox.
     /// </summary>
     private void TextBox_TextChanged(object sender, TextChangedEventArgs e)
     {
@@ -96,7 +96,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Check Changed Handler for options checkboxes
+    /// Check Changed Handler for options and tree expansion checkboxes.
     /// </summary>
     private void Checkbox_CheckChanged(object sender, RoutedEventArgs e)
     {
@@ -105,14 +105,44 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (ReferenceEquals(sender, ExpandCapturesCheckBox) || ReferenceEquals(sender, ExpandGroupsCheckBox))
+        {
+            UpdateTreeExpansionInPlace();
+            return;
+        }
+
         UpdateCSharpSnippet();
         _ = SetupAndRunRegexWorkerAsync();
+    }
+
+    private void UpdateTreeExpansionInPlace()
+    {
+        if (MatchesTreeView.Items.Count == 0 || MatchesTreeView.Items[0] is not TreeViewItem rootItem)
+        {
+            return;
+        }
+
+        bool expandCaptures = ExpandCapturesCheckBox.IsChecked == true;
+        bool expandGroups = ExpandGroupsCheckBox.IsChecked == true;
+
+        foreach (TreeViewItem matchItem in rootItem.Items.OfType<TreeViewItem>())
+        {
+            if (matchItem.Items.Count >= 1 && matchItem.Items[0] is TreeViewItem capturesItem)
+            {
+                capturesItem.IsExpanded = expandCaptures;
+            }
+
+            if (matchItem.Items.Count >= 2 && matchItem.Items[1] is TreeViewItem groupsItem)
+            {
+                groupsItem.IsExpanded = expandGroups;
+            }
+        }
     }
 
     private void ClearAllButton_Click(object sender, RoutedEventArgs e)
     {
         stopWork = true;
-        regexWorkCts?.Cancel();
+        CancelPendingEvaluation();
 
         DataTextBox.Text = string.Empty;
         ExpressionTextBox.Text = string.Empty;
@@ -225,22 +255,18 @@ public partial class MainWindow : Window
 
     private void SaveAndExitButton_Click(object sender, RoutedEventArgs e)
     {
-        SaveConfiguration();
-        Application.Current.Shutdown();
+        Close();
+        Application.Current?.Shutdown();
     }
 
     private void Window_Closing(object? sender, CancelEventArgs e)
     {
+        CancelPendingEvaluation();
         SaveConfiguration();
     }
 
     private void SaveConfiguration()
     {
-        if (!string.IsNullOrEmpty(ExpressionTextBox.Text) && !savedExpressions.Contains(ExpressionTextBox.Text))
-        {
-            savedExpressions.Insert(0, ExpressionTextBox.Text);
-        }
-
         var settings = new AppSettings
         {
             CurrentExpression = ExpressionTextBox.Text,
@@ -275,6 +301,16 @@ public partial class MainWindow : Window
         }
     }
 
+    private void CancelPendingEvaluation()
+    {
+        if (regexWorkCts is { } activeCts)
+        {
+            regexWorkCts = null;
+            activeCts.Cancel();
+            activeCts.Dispose();
+        }
+    }
+
     private async Task SetupAndRunRegexWorkerAsync()
     {
         if (stopWork)
@@ -282,8 +318,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        regexWorkCts?.Cancel();
-        regexWorkCts?.Dispose();
+        CancelPendingEvaluation();
         var cts = new CancellationTokenSource();
         regexWorkCts = cts;
         CancellationToken token = cts.Token;
@@ -302,6 +337,7 @@ public partial class MainWindow : Window
         MatchesTreeView.Items.Clear();
         MatchesTreeView.Items.Add("Working...");
         StatusTextBlock.Text = "Evaluating regular expression...";
+        highlightAdorner?.UpdateHighlights([]);
 
         try
         {
@@ -309,7 +345,7 @@ public partial class MainWindow : Window
                 () => RegexEvaluatorService.Evaluate(expression, testData, replacementText, options, token),
                 token);
 
-            if (token.IsCancellationRequested)
+            if (token.IsCancellationRequested || !ReferenceEquals(regexWorkCts, cts))
             {
                 return;
             }
@@ -322,14 +358,14 @@ public partial class MainWindow : Window
         }
         catch (RegexMatchTimeoutException timeoutEx)
         {
-            if (!token.IsCancellationRequested)
+            if (!token.IsCancellationRequested && ReferenceEquals(regexWorkCts, cts))
             {
                 DisplayTimeoutException(timeoutEx);
             }
         }
         catch (Exception ex)
         {
-            if (!token.IsCancellationRequested)
+            if (!token.IsCancellationRequested && ReferenceEquals(regexWorkCts, cts))
             {
                 DisplayException(ex);
             }
@@ -376,7 +412,11 @@ public partial class MainWindow : Window
                 matchesTreeItem.Items.Add(matchTreeItem);
 
                 // Captures
-                var capturesTreeItem = new TreeViewItem { Header = $"Captures ({match.Captures.Count})", IsExpanded = ExpandCapturesCheckBox.IsChecked == true };
+                var capturesTreeItem = new TreeViewItem
+                {
+                    Header = $"Captures ({match.Captures.Count})",
+                    IsExpanded = ExpandCapturesCheckBox.IsChecked == true
+                };
                 matchTreeItem.Items.Add(capturesTreeItem);
                 for (int j = 0; j < match.Captures.Count; j++)
                 {
@@ -389,7 +429,11 @@ public partial class MainWindow : Window
                 }
 
                 // Groups
-                var groupsTreeItem = new TreeViewItem { Header = $"Groups ({match.Groups.Count})", IsExpanded = ExpandGroupsCheckBox.IsChecked == true };
+                var groupsTreeItem = new TreeViewItem
+                {
+                    Header = $"Groups ({match.Groups.Count})",
+                    IsExpanded = ExpandGroupsCheckBox.IsChecked == true
+                };
                 matchTreeItem.Items.Add(groupsTreeItem);
                 for (int j = 0; j < match.Groups.Count; j++)
                 {

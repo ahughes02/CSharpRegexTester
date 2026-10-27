@@ -10,19 +10,30 @@ public static class CSharpCodeGenerator
 {
     public static string GenerateSnippet(string pattern, string replacement, RegexOptions options)
     {
+        ArgumentNullException.ThrowIfNull(pattern);
+        ArgumentNullException.ThrowIfNull(replacement);
+
         string patternLiteral = FormatStringLiteral(pattern);
-        string optionsExpression = FormatRegexOptionsExpression(options);
-        string optionsArgument = options == RegexOptions.None ? string.Empty : $", {optionsExpression}";
+
+        // [GeneratedRegex] is already compile-time generated, so RegexOptions.Compiled is redundant there (SYSLIB1045).
+        RegexOptions generatedRegexOptions = options & ~RegexOptions.Compiled;
+        string generatedOptionsArg = generatedRegexOptions == RegexOptions.None
+            ? string.Empty
+            : $", {FormatRegexOptionsExpression(generatedRegexOptions)}";
+
+        string runtimeOptionsArg = options == RegexOptions.None
+            ? string.Empty
+            : $", {FormatRegexOptionsExpression(options)}";
 
         var sb = new StringBuilder();
         sb.AppendLine("using System.Text.RegularExpressions;");
         sb.AppendLine();
         sb.AppendLine("// 1. Modern .NET Source-Generated Regex (compile-time):");
-        sb.AppendLine($"[GeneratedRegex({patternLiteral}{optionsArgument})]");
+        sb.AppendLine($"[GeneratedRegex({patternLiteral}{generatedOptionsArg})]");
         sb.AppendLine("private static partial Regex MyRegex();");
         sb.AppendLine();
         sb.AppendLine("// 2. Runtime Regex instance:");
-        sb.AppendLine($"var regex = new Regex({patternLiteral}{optionsArgument});");
+        sb.AppendLine($"var regex = new Regex({patternLiteral}{runtimeOptionsArg});");
         sb.AppendLine("MatchCollection matches = regex.Matches(input);");
 
         if (!string.IsNullOrEmpty(replacement))
@@ -36,6 +47,8 @@ public static class CSharpCodeGenerator
 
     public static string FormatStringLiteral(string value)
     {
+        ArgumentNullException.ThrowIfNull(value);
+
         if (!value.Contains('"') && !value.Contains('\r') && !value.Contains('\n'))
         {
             return $"@\"{value}\"";

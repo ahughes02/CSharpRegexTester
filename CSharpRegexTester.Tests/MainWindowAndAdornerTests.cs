@@ -168,6 +168,12 @@ public class MainWindowAndAdornerTests
             InvokePrivate(window, "DisplayResults", singleMatchResult);
             Assert.Contains("1 match", window.MatchSummaryTextBlock.Text);
 
+            // Test in-place tree expansion toggle via ExpandCapturesCheckBox and ExpandGroupsCheckBox
+            window.ExpandCapturesCheckBox.IsChecked = true;
+            InvokePrivate(window, "Checkbox_CheckChanged", window.ExpandCapturesCheckBox, new RoutedEventArgs());
+            window.ExpandGroupsCheckBox.IsChecked = true;
+            InvokePrivate(window, "Checkbox_CheckChanged", window.ExpandGroupsCheckBox, new RoutedEventArgs());
+
             // Test DisplayResults with 0 matches
             RegexEvaluationResult emptyResult = RegexEvaluatorService.Evaluate(
                 @"999",

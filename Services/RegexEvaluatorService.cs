@@ -14,10 +14,13 @@ public static class RegexEvaluatorService
     public static RegexEvaluationResult Evaluate(
         string pattern,
         string input,
-        string replacement,
+        string? replacement,
         RegexOptions options,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(pattern);
+        ArgumentNullException.ThrowIfNull(input);
+
         cancellationToken.ThrowIfCancellationRequested();
 
         long startTimestamp = Stopwatch.GetTimestamp();

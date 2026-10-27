@@ -51,8 +51,9 @@ public class CSharpCodeGeneratorTests
         string withReplacement = CSharpCodeGenerator.GenerateSnippet(
             @"\d+",
             "#",
-            RegexOptions.IgnoreCase);
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
         Assert.Contains("[GeneratedRegex(@\"\\d+\", RegexOptions.IgnoreCase)]", withReplacement);
+        Assert.Contains("var regex = new Regex(@\"\\d+\", RegexOptions.IgnoreCase | RegexOptions.Compiled);", withReplacement);
         Assert.Contains("string replaced = regex.Replace(input, @\"#\");", withReplacement);
     }
 }
