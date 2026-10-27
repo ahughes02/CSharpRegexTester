@@ -7,6 +7,7 @@ This document defines the architecture, coding standards, and workflow expectati
 ## 1. Project Overview & Tech Stack
 
 - **Target Framework**: `net10.0-windows` (`.NET 10` WPF Desktop Application)
+- **Packaging**: Configured for standalone portable single-file execution (`<SelfContained>true</SelfContained>`, `<PublishSingleFile>true</PublishSingleFile>`, `<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>`, `<EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>`, `<DebugType>embedded</DebugType>`).
 - **Language settings**: `<Nullable>enable</Nullable>`, `<ImplicitUsings>enable</ImplicitUsings>`
 - **External NuGet Dependencies**: **None.** Prefer native .NET 10 BCL (`System.Text.RegularExpressions`, `System.Text.Json`) and standard WPF primitives over adding third-party packages unless explicitly requested by the user.
 
@@ -60,6 +61,12 @@ Before completing any task that modifies code or XAML:
    dotnet build CSharpRegexTester.csproj
    ```
    Ensure the build succeeds with **0 Warnings** and **0 Errors**.
-2. **Workspace Cleanliness**:
+2. **Unit Test & Coverage Verification**:
+   Run:
+   ```powershell
+   dotnet test CSharpRegexTester.Tests\CSharpRegexTester.Tests.csproj -p:CollectCoverage=true -p:CoverletOutput=./TestResults/
+   ```
+   Ensure all unit tests pass and code coverage remains **>= 80%** across `CSharpRegexTester`.
+3. **Workspace Cleanliness**:
    - Check `git status --short` to ensure no stray temporary files or duplicate directories were created.
    - Keep `README.md` (human-facing) and `AGENTS.md` (agent-facing) in sync if new folders, services, or user-facing features are added.

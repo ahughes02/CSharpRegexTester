@@ -9,9 +9,9 @@ namespace CSharpRegexTester.Services;
 /// </summary>
 public static class SettingsService
 {
-    private const string ConfigFileName = "RegExTester.cfg";
+    public const string ConfigFileName = "RegExTester.cfg";
 
-    private static readonly string AppDataConfigPath = Path.Combine(
+    public static readonly string AppDataConfigPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "CSharpRegexTester",
         ConfigFileName);
@@ -21,13 +21,15 @@ public static class SettingsService
         WriteIndented = true
     };
 
-    public static AppSettings? Load()
+    public static AppSettings? Load(string? customPath = null)
     {
-        string? pathToLoad = File.Exists(AppDataConfigPath)
-            ? AppDataConfigPath
-            : File.Exists(ConfigFileName)
-                ? ConfigFileName
-                : null;
+        string? pathToLoad = customPath is not null
+            ? (File.Exists(customPath) ? customPath : null)
+            : File.Exists(AppDataConfigPath)
+                ? AppDataConfigPath
+                : File.Exists(ConfigFileName)
+                    ? ConfigFileName
+                    : null;
 
         if (pathToLoad is null)
         {
@@ -45,19 +47,21 @@ public static class SettingsService
         }
     }
 
-    public static void Save(AppSettings settings)
+    public static void Save(AppSettings settings, string? customPath = null)
     {
         ArgumentNullException.ThrowIfNull(settings);
 
+        string targetPath = customPath ?? AppDataConfigPath;
+
         try
         {
-            string? directory = Path.GetDirectoryName(AppDataConfigPath);
+            string? directory = Path.GetDirectoryName(targetPath);
             if (!string.IsNullOrEmpty(directory))
             {
                 Directory.CreateDirectory(directory);
             }
 
-            using FileStream configStream = File.Create(AppDataConfigPath);
+            using FileStream configStream = File.Create(targetPath);
             JsonSerializer.Serialize(configStream, settings, JsonOptions);
             configStream.Flush();
         }

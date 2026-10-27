@@ -16,6 +16,21 @@
                 "kind": "build",
                 "isDefault": true
             }
+        },
+        {
+            "label": "publish-portable",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "publish",
+                "${workspaceFolder}/CSharpRegexTester.csproj",
+                "-c",
+                "Release",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile",
+            "group": "build"
         }
     ]
 }

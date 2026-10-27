@@ -17,7 +17,7 @@ public partial class MainWindow : Window
     private readonly (CheckBox CheckBox, RegexOptions Option)[] optionMappings;
     private readonly List<string> savedExpressions = [];
 
-    private bool stopWork;
+    private bool stopWork = true;
     private CancellationTokenSource? regexWorkCts;
     private RegexMatchHighlightAdorner? highlightAdorner;
 
@@ -277,7 +277,7 @@ public partial class MainWindow : Window
 
     private async Task SetupAndRunRegexWorkerAsync()
     {
-        if (!IsLoaded || stopWork)
+        if (stopWork)
         {
             return;
         }

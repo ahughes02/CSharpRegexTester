@@ -38,6 +38,25 @@ dotnet build
 dotnet run
 ```
 
+### Publish a Standalone Portable Executable (`.exe`)
+
+The project is configured for self-contained, single-file publishing (with native WPF libraries and symbols embedded and compressed into a single `.exe` requiring no pre-installed .NET runtime):
+
+```powershell
+# Publish for the current Windows architecture (win-x64 or win-arm64)
+dotnet publish CSharpRegexTester.csproj -c Release
+
+# Or specify a target architecture explicitly:
+dotnet publish CSharpRegexTester.csproj -c Release -r win-x64
+dotnet publish CSharpRegexTester.csproj -c Release -r win-arm64
+```
+
+### Run Unit Tests & Code Coverage
+
+```powershell
+dotnet test -p:CollectCoverage=true -p:CoverletOutput=./TestResults/
+```
+
 ### Run & Debug in Visual Studio Code
 
 This repository includes `.vscode/launch.json` and `.vscode/tasks.json`:
@@ -65,6 +84,7 @@ CSharpRegexTester/
 │   ├── RegexEvaluatorService.cs       # Executes Regex match/replace/split with timeout & timing
 │   ├── RegexTokenInserter.cs          # Caret-aware token insertion and selection wrapping
 │   └── SettingsService.cs             # JSON persistence to %LocalAppData%
+├── CSharpRegexTester.Tests/           # xUnit test suite covering Models, Services, Controls, and UI
 ├── MainWindow.xaml                    # Application UI layout and shared control styles
 └── MainWindow.xaml.cs                 # UI event coordination
 ```
