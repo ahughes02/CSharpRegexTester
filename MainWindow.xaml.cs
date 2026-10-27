@@ -1,9 +1,11 @@
-using System.Diagnostics;
-using System.Text;
+using System.ComponentModel;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
+using CSharpRegexTester.Controls;
+using CSharpRegexTester.Models;
+using CSharpRegexTester.Services;
 
 namespace CSharpRegexTester;
 
@@ -12,25 +14,30 @@ namespace CSharpRegexTester;
 /// </summary>
 public partial class MainWindow : Window
 {
-    private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(2);
+    private readonly (CheckBox CheckBox, RegexOptions Option)[] optionMappings;
+    private readonly List<string> savedExpressions = [];
 
     private bool stopWork;
     private CancellationTokenSource? regexWorkCts;
     private RegexMatchHighlightAdorner? highlightAdorner;
-    private readonly List<string> savedExpressions = [];
-
-    private sealed record CaptureSnapshot(string Value, int Index, int Length);
-    private sealed record GroupSnapshot(int Number, string Name, bool Success, string Value, int Index, int Length);
-    private sealed record MatchSnapshot(int Index, int Length, string Value, IReadOnlyList<CaptureSnapshot> Captures, IReadOnlyList<GroupSnapshot> Groups);
-    private sealed record RegexWorkResult(
-        IReadOnlyList<MatchSnapshot> Matches,
-        string ReplacementResults,
-        IReadOnlyList<string> SplitResults,
-        TimeSpan Elapsed);
 
     public MainWindow()
     {
         InitializeComponent();
+
+        optionMappings =
+        [
+            (IgnoreCaseCheckBox, RegexOptions.IgnoreCase),
+            (ExplicitCaptureCheckBox, RegexOptions.ExplicitCapture),
+            (CompiledCheckBox, RegexOptions.Compiled),
+            (CultureInvariantCheckBox, RegexOptions.CultureInvariant),
+            (ECMAScriptCheckBox, RegexOptions.ECMAScript),
+            (IgnorePatternWhitespace, RegexOptions.IgnorePatternWhitespace),
+            (MultilineCheckBox, RegexOptions.Multiline),
+            (RightToLeftCheckBox, RegexOptions.RightToLeft),
+            (SinglelineCheckBox, RegexOptions.Singleline),
+            (NonBacktrackingCheckBox, RegexOptions.NonBacktracking)
+        ];
 
         Loaded += MainWindow_Loaded;
     }
@@ -43,21 +50,28 @@ public partial class MainWindow : Window
             adornerLayer.Add(highlightAdorner);
         }
 
+        LoadConfigurationIntoUi();
+        UpdateCSharpSnippet();
+        _ = SetupAndRunRegexWorkerAsync();
+    }
+
+    private void LoadConfigurationIntoUi()
+    {
         stopWork = true;
-        var configFile = RegexTesterConfigurationFile.Load();
+        AppSettings? settings = SettingsService.Load();
 
-        if (configFile is not null)
+        if (settings is not null)
         {
-            DataTextBox.Text = configFile.CurrentTestData ?? string.Empty;
-            ExpressionTextBox.Text = configFile.CurrentExpression ?? string.Empty;
-            ReplacementTextTextBox.Text = configFile.CurrentReplacementText ?? string.Empty;
-            ApplyRegexOptionsToCheckBoxes(configFile.SelectedOptions);
-            ExpandCapturesCheckBox.IsChecked = configFile.ExpandCaptures;
-            ExpandGroupsCheckBox.IsChecked = configFile.ExpandGroups;
+            DataTextBox.Text = settings.CurrentTestData ?? string.Empty;
+            ExpressionTextBox.Text = settings.CurrentExpression ?? string.Empty;
+            ReplacementTextTextBox.Text = settings.CurrentReplacementText ?? string.Empty;
+            ApplyRegexOptionsToCheckBoxes(settings.SelectedOptions);
+            ExpandCapturesCheckBox.IsChecked = settings.ExpandCaptures;
+            ExpandGroupsCheckBox.IsChecked = settings.ExpandGroups;
 
-            if (configFile.ExpressionList is { Count: > 0 })
+            if (settings.ExpressionList is { Count: > 0 })
             {
-                foreach (string expr in configFile.ExpressionList.Where(s => !string.IsNullOrEmpty(s)).Distinct())
+                foreach (string expr in settings.ExpressionList.Where(s => !string.IsNullOrEmpty(s)).Distinct())
                 {
                     savedExpressions.Add(expr);
                 }
@@ -65,9 +79,6 @@ public partial class MainWindow : Window
             }
         }
         stopWork = false;
-
-        UpdateCSharpSnippet();
-        _ = SetupAndRunRegexWorkerAsync();
     }
 
     /// <summary>
@@ -131,39 +142,14 @@ public partial class MainWindow : Window
             return;
         }
 
-        int selectionStart = ExpressionTextBox.SelectionStart;
-        int selectionLength = ExpressionTextBox.SelectionLength;
-        string selectedText = ExpressionTextBox.SelectedText;
+        TokenInsertionResult insertion = RegexTokenInserter.InsertToken(
+            ExpressionTextBox.Text,
+            ExpressionTextBox.SelectionStart,
+            ExpressionTextBox.SelectionLength,
+            token);
 
-        string insertion;
-        int newCaretOffset;
-
-        // If the token is a wrapping construct like (), (?:), (?<name>), (?=), (?<=)
-        if (token.EndsWith(')') && token.StartsWith('('))
-        {
-            int openIndex = token.Length - 1;
-            string prefix = token[..openIndex];
-            insertion = $"{prefix}{selectedText})";
-            newCaretOffset = selectionLength > 0 ? insertion.Length : prefix.Length;
-        }
-        else if (token == "[^]")
-        {
-            insertion = $"[^{selectedText}]";
-            newCaretOffset = selectionLength > 0 ? insertion.Length : 2;
-        }
-        else
-        {
-            insertion = token;
-            newCaretOffset = insertion.Length;
-        }
-
-        string currentText = ExpressionTextBox.Text;
-        ExpressionTextBox.Text = string.Concat(
-            currentText.AsSpan(0, selectionStart),
-            insertion,
-            currentText.AsSpan(selectionStart + selectionLength));
-
-        ExpressionTextBox.SelectionStart = selectionStart + newCaretOffset;
+        ExpressionTextBox.Text = insertion.UpdatedText;
+        ExpressionTextBox.SelectionStart = insertion.NewCaretIndex;
         ExpressionTextBox.SelectionLength = 0;
         ExpressionTextBox.Focus();
     }
@@ -220,7 +206,10 @@ public partial class MainWindow : Window
 
     private void CopyCSharpButton_Click(object sender, RoutedEventArgs e)
     {
-        string snippet = GenerateCSharpSnippet(ExpressionTextBox.Text, ReplacementTextTextBox.Text, GetSelectedRegexOptions());
+        string snippet = CSharpCodeGenerator.GenerateSnippet(
+            ExpressionTextBox.Text,
+            ReplacementTextTextBox.Text,
+            GetSelectedRegexOptions());
         CSharpSnippetTextBox.Text = snippet;
 
         try
@@ -240,7 +229,7 @@ public partial class MainWindow : Window
         Application.Current.Shutdown();
     }
 
-    private void Window_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
+    private void Window_Closing(object? sender, CancelEventArgs e)
     {
         SaveConfiguration();
     }
@@ -252,7 +241,7 @@ public partial class MainWindow : Window
             savedExpressions.Insert(0, ExpressionTextBox.Text);
         }
 
-        var configFile = new RegexTesterConfigurationFile
+        var settings = new AppSettings
         {
             CurrentExpression = ExpressionTextBox.Text,
             CurrentReplacementText = ReplacementTextTextBox.Text,
@@ -262,78 +251,28 @@ public partial class MainWindow : Window
             ExpandGroups = ExpandGroupsCheckBox.IsChecked == true,
             ExpressionList = [.. savedExpressions]
         };
-        configFile.Save();
+        SettingsService.Save(settings);
     }
 
     private RegexOptions GetSelectedRegexOptions()
     {
         RegexOptions options = RegexOptions.None;
-
-        if (IgnoreCaseCheckBox.IsChecked == true)
+        foreach ((CheckBox checkBox, RegexOptions option) in optionMappings)
         {
-            options |= RegexOptions.IgnoreCase;
+            if (checkBox.IsChecked == true)
+            {
+                options |= option;
+            }
         }
-
-        if (ExplicitCaptureCheckBox.IsChecked == true)
-        {
-            options |= RegexOptions.ExplicitCapture;
-        }
-
-        if (CompiledCheckBox.IsChecked == true)
-        {
-            options |= RegexOptions.Compiled;
-        }
-
-        if (CultureInvariantCheckBox.IsChecked == true)
-        {
-            options |= RegexOptions.CultureInvariant;
-        }
-
-        if (ECMAScriptCheckBox.IsChecked == true)
-        {
-            options |= RegexOptions.ECMAScript;
-        }
-
-        if (IgnorePatternWhitespace.IsChecked == true)
-        {
-            options |= RegexOptions.IgnorePatternWhitespace;
-        }
-
-        if (MultilineCheckBox.IsChecked == true)
-        {
-            options |= RegexOptions.Multiline;
-        }
-
-        if (RightToLeftCheckBox.IsChecked == true)
-        {
-            options |= RegexOptions.RightToLeft;
-        }
-
-        if (SinglelineCheckBox.IsChecked == true)
-        {
-            options |= RegexOptions.Singleline;
-        }
-
-        if (NonBacktrackingCheckBox.IsChecked == true)
-        {
-            options |= RegexOptions.NonBacktracking;
-        }
-
         return options;
     }
 
     private void ApplyRegexOptionsToCheckBoxes(RegexOptions options)
     {
-        IgnoreCaseCheckBox.IsChecked = options.HasFlag(RegexOptions.IgnoreCase);
-        ExplicitCaptureCheckBox.IsChecked = options.HasFlag(RegexOptions.ExplicitCapture);
-        CompiledCheckBox.IsChecked = options.HasFlag(RegexOptions.Compiled);
-        CultureInvariantCheckBox.IsChecked = options.HasFlag(RegexOptions.CultureInvariant);
-        ECMAScriptCheckBox.IsChecked = options.HasFlag(RegexOptions.ECMAScript);
-        IgnorePatternWhitespace.IsChecked = options.HasFlag(RegexOptions.IgnorePatternWhitespace);
-        MultilineCheckBox.IsChecked = options.HasFlag(RegexOptions.Multiline);
-        RightToLeftCheckBox.IsChecked = options.HasFlag(RegexOptions.RightToLeft);
-        SinglelineCheckBox.IsChecked = options.HasFlag(RegexOptions.Singleline);
-        NonBacktrackingCheckBox.IsChecked = options.HasFlag(RegexOptions.NonBacktracking);
+        foreach ((CheckBox checkBox, RegexOptions option) in optionMappings)
+        {
+            checkBox.IsChecked = options.HasFlag(option);
+        }
     }
 
     private async Task SetupAndRunRegexWorkerAsync()
@@ -366,8 +305,8 @@ public partial class MainWindow : Window
 
         try
         {
-            RegexWorkResult result = await Task.Run(
-                () => EvaluateRegex(expression, testData, replacementText, options, token),
+            RegexEvaluationResult result = await Task.Run(
+                () => RegexEvaluatorService.Evaluate(expression, testData, replacementText, options, token),
                 token);
 
             if (token.IsCancellationRequested)
@@ -397,57 +336,6 @@ public partial class MainWindow : Window
         }
     }
 
-    private static RegexWorkResult EvaluateRegex(
-        string pattern,
-        string input,
-        string replacement,
-        RegexOptions options,
-        CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        long startTimestamp = Stopwatch.GetTimestamp();
-
-        string replaceWith = replacement ?? string.Empty;
-        var regex = new Regex(pattern, options, RegexTimeout);
-        MatchCollection matches = regex.Matches(input);
-
-        var matchSnapshots = new List<MatchSnapshot>();
-
-        for (int i = 0; i < matches.Count; i++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            Match match = matches[i];
-
-            var captures = new List<CaptureSnapshot>(match.Captures.Count);
-            for (int j = 0; j < match.Captures.Count; j++)
-            {
-                Capture capture = match.Captures[j];
-                captures.Add(new CaptureSnapshot(capture.Value, capture.Index, capture.Length));
-            }
-
-            var groups = new List<GroupSnapshot>(match.Groups.Count);
-            for (int j = 0; j < match.Groups.Count; j++)
-            {
-                Group group = match.Groups[j];
-                string rawGroupName = regex.GroupNameFromNumber(j);
-                string formattedName = rawGroupName != j.ToString() ? $"<{rawGroupName}>" : string.Empty;
-                groups.Add(new GroupSnapshot(j, formattedName, group.Success, group.Value, group.Index, group.Length));
-            }
-
-            matchSnapshots.Add(new MatchSnapshot(match.Index, match.Length, match.Value, captures, groups));
-        }
-
-        string replacementResults = matchSnapshots.Count > 0
-            ? regex.Replace(input, replaceWith)
-            : string.Empty;
-
-        string[] splitResults = regex.Split(input);
-        TimeSpan elapsed = Stopwatch.GetElapsedTime(startTimestamp);
-
-        return new RegexWorkResult(matchSnapshots, replacementResults, splitResults, elapsed);
-    }
-
     private void ClearResultsDisplay(string statusMessage)
     {
         MatchesTreeView.Items.Clear();
@@ -458,9 +346,8 @@ public partial class MainWindow : Window
         highlightAdorner?.UpdateHighlights([]);
     }
 
-    private void DisplayResults(RegexWorkResult result)
+    private void DisplayResults(RegexEvaluationResult result)
     {
-        // Populate Split Results
         var formattedSplits = new List<string>(result.SplitResults.Count);
         for (int i = 0; i < result.SplitResults.Count; i++)
         {
@@ -479,32 +366,30 @@ public partial class MainWindow : Window
             for (int i = 0; i < result.Matches.Count; i++)
             {
                 MatchSnapshot match = result.Matches[i];
-                var matchSpan = new TextSpan(match.Index, match.Length);
-                highlightSpans.Add(matchSpan);
+                highlightSpans.Add(match.Span);
 
                 var matchTreeItem = new TreeViewItem
                 {
                     Header = $"[{i}] - [{match.Value}] (Index: {match.Index}, Length: {match.Length})",
-                    Tag = matchSpan
+                    Tag = match.Span
                 };
                 matchesTreeItem.Items.Add(matchTreeItem);
 
                 // Captures
-                var capturesTreeItem = new TreeViewItem { Header = $"Captures ({match.Captures.Count})" };
+                var capturesTreeItem = new TreeViewItem { Header = $"Captures ({match.Captures.Count})", IsExpanded = ExpandCapturesCheckBox.IsChecked == true };
                 matchTreeItem.Items.Add(capturesTreeItem);
                 for (int j = 0; j < match.Captures.Count; j++)
                 {
                     CaptureSnapshot capture = match.Captures[j];
-                    var captureTreeItem = new TreeViewItem
+                    capturesTreeItem.Items.Add(new TreeViewItem
                     {
                         Header = $"[{j}] - [{capture.Value}] (Index: {capture.Index}, Length: {capture.Length})",
-                        Tag = new TextSpan(capture.Index, capture.Length)
-                    };
-                    capturesTreeItem.Items.Add(captureTreeItem);
+                        Tag = capture.Span
+                    });
                 }
 
                 // Groups
-                var groupsTreeItem = new TreeViewItem { Header = $"Groups ({match.Groups.Count})" };
+                var groupsTreeItem = new TreeViewItem { Header = $"Groups ({match.Groups.Count})", IsExpanded = ExpandGroupsCheckBox.IsChecked == true };
                 matchTreeItem.Items.Add(groupsTreeItem);
                 for (int j = 0; j < match.Groups.Count; j++)
                 {
@@ -513,22 +398,11 @@ public partial class MainWindow : Window
                         ? $"[{group.Number}]{group.Name} - [{group.Value}] (Index: {group.Index}, Length: {group.Length})"
                         : $"[{group.Number}]{group.Name} - <not matched>";
 
-                    var groupTreeItem = new TreeViewItem
+                    groupsTreeItem.Items.Add(new TreeViewItem
                     {
                         Header = header,
-                        Tag = group.Success ? new TextSpan(group.Index, group.Length) : null
-                    };
-                    groupsTreeItem.Items.Add(groupTreeItem);
-                }
-
-                if (ExpandCapturesCheckBox.IsChecked == true)
-                {
-                    capturesTreeItem.IsExpanded = true;
-                }
-
-                if (ExpandGroupsCheckBox.IsChecked == true)
-                {
-                    groupsTreeItem.IsExpanded = true;
+                        Tag = group.Span
+                    });
                 }
 
                 matchTreeItem.IsExpanded = true;
@@ -613,84 +487,9 @@ public partial class MainWindow : Window
             return;
         }
 
-        CSharpSnippetTextBox.Text = GenerateCSharpSnippet(
+        CSharpSnippetTextBox.Text = CSharpCodeGenerator.GenerateSnippet(
             ExpressionTextBox.Text,
             ReplacementTextTextBox.Text,
             GetSelectedRegexOptions());
-    }
-
-    private static string GenerateCSharpSnippet(string pattern, string replacement, RegexOptions options)
-    {
-        string patternLiteral = FormatCSharpStringLiteral(pattern);
-        string optionsExpression = FormatRegexOptionsExpression(options);
-        string optionsArgument = options == RegexOptions.None ? string.Empty : $", {optionsExpression}";
-
-        var sb = new StringBuilder();
-        sb.AppendLine("using System.Text.RegularExpressions;");
-        sb.AppendLine();
-        sb.AppendLine("// 1. Modern .NET Source-Generated Regex (compile-time):");
-        sb.AppendLine($"[GeneratedRegex({patternLiteral}{optionsArgument})]");
-        sb.AppendLine("private static partial Regex MyRegex();");
-        sb.AppendLine();
-        sb.AppendLine("// 2. Runtime Regex instance:");
-        sb.AppendLine($"var regex = new Regex({patternLiteral}{optionsArgument});");
-        sb.AppendLine("MatchCollection matches = regex.Matches(input);");
-
-        if (!string.IsNullOrEmpty(replacement))
-        {
-            string replacementLiteral = FormatCSharpStringLiteral(replacement);
-            sb.AppendLine($"string replaced = regex.Replace(input, {replacementLiteral});");
-        }
-
-        return sb.ToString();
-    }
-
-    private static string FormatCSharpStringLiteral(string value)
-    {
-        if (!value.Contains('"') && !value.Contains('\r') && !value.Contains('\n'))
-        {
-            return $"@\"{value}\"";
-        }
-
-        // Use C# 11+ raw string literal
-        int maxConsecutiveQuotes = 2;
-        int currentRun = 0;
-        foreach (char c in value)
-        {
-            if (c == '"')
-            {
-                currentRun++;
-                if (currentRun > maxConsecutiveQuotes)
-                {
-                    maxConsecutiveQuotes = currentRun;
-                }
-            }
-            else
-            {
-                currentRun = 0;
-            }
-        }
-
-        string delimiter = new('"', maxConsecutiveQuotes + 1);
-        return $"{delimiter}\r\n{value}\r\n{delimiter}";
-    }
-
-    private static string FormatRegexOptionsExpression(RegexOptions options)
-    {
-        if (options == RegexOptions.None)
-        {
-            return "RegexOptions.None";
-        }
-
-        var parts = new List<string>();
-        foreach (RegexOptions flag in Enum.GetValues<RegexOptions>())
-        {
-            if (flag != RegexOptions.None && options.HasFlag(flag))
-            {
-                parts.Add($"RegexOptions.{flag}");
-            }
-        }
-
-        return string.Join(" | ", parts);
     }
 }

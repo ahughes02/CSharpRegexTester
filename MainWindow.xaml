@@ -11,6 +11,32 @@
         MinHeight="540"
         MinWidth="860"
         Closing="Window_Closing">
+    <Window.Resources>
+        <Style x:Key="QuickInsertButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="MinWidth" Value="26"/>
+            <Setter Property="Padding" Value="5,0"/>
+            <Setter Property="Margin" Value="0,0,3,3"/>
+            <Setter Property="FontFamily" Value="Consolas"/>
+            <EventSetter Event="Click" Handler="RegexCharacterButton_Click"/>
+        </Style>
+
+        <Style x:Key="RegexOptionCheckBoxStyle" TargetType="CheckBox">
+            <Setter Property="Margin" Value="0,2,12,2"/>
+            <EventSetter Event="Checked" Handler="Checkbox_CheckChanged"/>
+            <EventSetter Event="Unchecked" Handler="Checkbox_CheckChanged"/>
+        </Style>
+
+        <Style x:Key="MonospaceTextBoxStyle" TargetType="TextBox">
+            <Setter Property="FontFamily" Value="Consolas"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Padding" Value="4"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="AcceptsReturn" Value="True"/>
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+        </Style>
+    </Window.Resources>
+
     <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -36,29 +62,29 @@
                 <!-- Quick-Insert Token Toolbar -->
                 <DockPanel Grid.Row="0" Margin="0,0,0,6" LastChildFill="False">
                     <WrapPanel DockPanel.Dock="Left" VerticalAlignment="Center">
-                        <Button x:Name="CaretButton" Content="^" Tag="^" Width="26" Height="24" Margin="0,0,3,3" Click="RegexCharacterButton_Click" ToolTip="Start of string or line (^)"/>
-                        <Button x:Name="DollarSignButton" Content="$" Tag="$" Width="26" Height="24" Margin="0,0,8,3" Click="RegexCharacterButton_Click" ToolTip="End of string or line ($)"/>
+                        <Button x:Name="CaretButton" Style="{StaticResource QuickInsertButtonStyle}" Content="^" Tag="^" ToolTip="Start of string or line (^)"/>
+                        <Button x:Name="DollarSignButton" Style="{StaticResource QuickInsertButtonStyle}" Content="$" Tag="$" Margin="0,0,8,3" ToolTip="End of string or line ($)"/>
 
-                        <Button x:Name="WordCharacterButton" Content="\w" Tag="\w" Width="28" Height="24" Margin="0,0,3,3" Click="RegexCharacterButton_Click" ToolTip="Word character (\w)"/>
-                        <Button x:Name="NonWordCharacterButton" Content="\W" Tag="\W" Width="28" Height="24" Margin="0,0,3,3" Click="RegexCharacterButton_Click" ToolTip="Non-word character (\W)"/>
-                        <Button x:Name="DigitButton" Content="\d" Tag="\d" Width="28" Height="24" Margin="0,0,3,3" Click="RegexCharacterButton_Click" ToolTip="Digit character (\d)"/>
-                        <Button x:Name="NonDigitButton" Content="\D" Tag="\D" Width="28" Height="24" Margin="0,0,3,3" Click="RegexCharacterButton_Click" ToolTip="Non-digit character (\D)"/>
-                        <Button x:Name="WhitespaceButton" Content="\s" Tag="\s" Width="28" Height="24" Margin="0,0,3,3" Click="RegexCharacterButton_Click" ToolTip="Whitespace character (\s)"/>
-                        <Button x:Name="NonWhitespaceButton" Content="\S" Tag="\S" Width="28" Height="24" Margin="0,0,3,3" Click="RegexCharacterButton_Click" ToolTip="Non-whitespace character (\S)"/>
-                        <Button x:Name="WordBoundaryButton" Content="\b" Tag="\b" Width="28" Height="24" Margin="0,0,8,3" Click="RegexCharacterButton_Click" ToolTip="Word boundary (\b)"/>
+                        <Button x:Name="WordCharacterButton" Style="{StaticResource QuickInsertButtonStyle}" Content="\w" Tag="\w" ToolTip="Word character (\w)"/>
+                        <Button x:Name="NonWordCharacterButton" Style="{StaticResource QuickInsertButtonStyle}" Content="\W" Tag="\W" ToolTip="Non-word character (\W)"/>
+                        <Button x:Name="DigitButton" Style="{StaticResource QuickInsertButtonStyle}" Content="\d" Tag="\d" ToolTip="Digit character (\d)"/>
+                        <Button x:Name="NonDigitButton" Style="{StaticResource QuickInsertButtonStyle}" Content="\D" Tag="\D" ToolTip="Non-digit character (\D)"/>
+                        <Button x:Name="WhitespaceButton" Style="{StaticResource QuickInsertButtonStyle}" Content="\s" Tag="\s" ToolTip="Whitespace character (\s)"/>
+                        <Button x:Name="NonWhitespaceButton" Style="{StaticResource QuickInsertButtonStyle}" Content="\S" Tag="\S" ToolTip="Non-whitespace character (\S)"/>
+                        <Button x:Name="WordBoundaryButton" Style="{StaticResource QuickInsertButtonStyle}" Content="\b" Tag="\b" Margin="0,0,8,3" ToolTip="Word boundary (\b)"/>
 
-                        <Button x:Name="PeriodButton" Content="." Tag="." Width="26" Height="24" Margin="0,0,3,3" Click="RegexCharacterButton_Click" ToolTip="Any character except newline (.)"/>
-                        <Button x:Name="PlusSignButton" Content="+" Tag="+" Width="26" Height="24" Margin="0,0,3,3" Click="RegexCharacterButton_Click" ToolTip="One or more times (+)"/>
-                        <Button x:Name="AsteriskButton" Content="*" Tag="*" Width="26" Height="24" Margin="0,0,8,3" Click="RegexCharacterButton_Click" ToolTip="Zero or more times (*)"/>
+                        <Button x:Name="PeriodButton" Style="{StaticResource QuickInsertButtonStyle}" Content="." Tag="." ToolTip="Any character except newline (.)"/>
+                        <Button x:Name="PlusSignButton" Style="{StaticResource QuickInsertButtonStyle}" Content="+" Tag="+" ToolTip="One or more times (+)"/>
+                        <Button x:Name="AsteriskButton" Style="{StaticResource QuickInsertButtonStyle}" Content="*" Tag="*" Margin="0,0,8,3" ToolTip="Zero or more times (*)"/>
 
-                        <Button x:Name="CharClassButton" Content="[a-z]" Tag="[a-z]" Padding="5,0" Height="24" Margin="0,0,3,3" Click="RegexCharacterButton_Click" ToolTip="Character range/set ([a-z])"/>
-                        <Button x:Name="NegatedCharClassButton" Content="[^...]" Tag="[^]" Padding="5,0" Height="24" Margin="0,0,8,3" Click="RegexCharacterButton_Click" ToolTip="Negated character class ([^...])"/>
+                        <Button x:Name="CharClassButton" Style="{StaticResource QuickInsertButtonStyle}" Content="[a-z]" Tag="[a-z]" ToolTip="Character range/set ([a-z])"/>
+                        <Button x:Name="NegatedCharClassButton" Style="{StaticResource QuickInsertButtonStyle}" Content="[^...]" Tag="[^]" Margin="0,0,8,3" ToolTip="Negated character class ([^...])"/>
 
-                        <Button x:Name="GroupButton" Content="(...)" Tag="()" Padding="5,0" Height="24" Margin="0,0,3,3" Click="RegexCharacterButton_Click" ToolTip="Capturing group (...) — wraps selected text"/>
-                        <Button x:Name="NonCapturingGroupButton" Content="(?:...)" Tag="(?:)" Padding="5,0" Height="24" Margin="0,0,3,3" Click="RegexCharacterButton_Click" ToolTip="Non-capturing group (?:...) — wraps selected text"/>
-                        <Button x:Name="NamedGroupButton" Content="(?&lt;n&gt;)" Tag="(?&lt;name&gt;)" Padding="5,0" Height="24" Margin="0,0,3,3" Click="RegexCharacterButton_Click" ToolTip="Named capturing group (?&lt;name&gt;...) — wraps selected text"/>
-                        <Button x:Name="LookaheadButton" Content="(?=...)" Tag="(?=)" Padding="5,0" Height="24" Margin="0,0,3,3" Click="RegexCharacterButton_Click" ToolTip="Positive lookahead (?=...)"/>
-                        <Button x:Name="LookbehindButton" Content="(?&lt;=...)" Tag="(?&lt;=)" Padding="5,0" Height="24" Margin="0,0,8,3" Click="RegexCharacterButton_Click" ToolTip="Positive lookbehind (?&lt;=...)"/>
+                        <Button x:Name="GroupButton" Style="{StaticResource QuickInsertButtonStyle}" Content="(...)" Tag="()" ToolTip="Capturing group (...) — wraps selected text"/>
+                        <Button x:Name="NonCapturingGroupButton" Style="{StaticResource QuickInsertButtonStyle}" Content="(?:...)" Tag="(?:)" ToolTip="Non-capturing group (?:...) — wraps selected text"/>
+                        <Button x:Name="NamedGroupButton" Style="{StaticResource QuickInsertButtonStyle}" Content="(?&lt;n&gt;)" Tag="(?&lt;name&gt;)" ToolTip="Named capturing group (?&lt;name&gt;...) — wraps selected text"/>
+                        <Button x:Name="LookaheadButton" Style="{StaticResource QuickInsertButtonStyle}" Content="(?=...)" Tag="(?=)" ToolTip="Positive lookahead (?=...)"/>
+                        <Button x:Name="LookbehindButton" Style="{StaticResource QuickInsertButtonStyle}" Content="(?&lt;=...)" Tag="(?&lt;=)" Margin="0,0,8,3" ToolTip="Positive lookbehind (?&lt;=...)"/>
                     </WrapPanel>
 
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
@@ -70,14 +96,9 @@
                 <!-- Regular Expression Input with Native Watermark -->
                 <Grid Grid.Row="1">
                     <TextBox x:Name="ExpressionTextBox"
+                             Style="{StaticResource MonospaceTextBoxStyle}"
                              Height="68"
-                             TextWrapping="Wrap"
-                             AcceptsReturn="True"
-                             TextChanged="TextBox_TextChanged"
-                             VerticalScrollBarVisibility="Auto"
-                             FontFamily="Consolas"
-                             FontSize="14"
-                             Padding="4"/>
+                             TextChanged="TextBox_TextChanged"/>
                     <TextBlock Text="Enter Regular Expression Here"
                                Margin="8,6,0,0"
                                VerticalAlignment="Top"
@@ -136,19 +157,19 @@
             <!-- Right side of top panel: RegexOptions GroupBox -->
             <GroupBox Grid.Column="1" Header="Regex Options" Padding="8,6">
                 <UniformGrid Rows="4" Columns="3">
-                    <CheckBox x:Name="IgnoreCaseCheckBox" Content="IgnoreCase" Margin="0,2,12,2" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
-                    <CheckBox x:Name="ExplicitCaptureCheckBox" Content="ExplicitCapture" Margin="0,2,12,2" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
-                    <CheckBox x:Name="RightToLeftCheckBox" Content="RightToLeft" Margin="0,2,0,2" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
+                    <CheckBox x:Name="IgnoreCaseCheckBox" Style="{StaticResource RegexOptionCheckBoxStyle}" Content="IgnoreCase"/>
+                    <CheckBox x:Name="ExplicitCaptureCheckBox" Style="{StaticResource RegexOptionCheckBoxStyle}" Content="ExplicitCapture"/>
+                    <CheckBox x:Name="RightToLeftCheckBox" Style="{StaticResource RegexOptionCheckBoxStyle}" Content="RightToLeft" Margin="0,2,0,2"/>
 
-                    <CheckBox x:Name="SinglelineCheckBox" Content="Singleline" Margin="0,2,12,2" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
-                    <CheckBox x:Name="ECMAScriptCheckBox" Content="ECMAScript" Margin="0,2,12,2" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
-                    <CheckBox x:Name="CompiledCheckBox" Content="Compiled" Margin="0,2,0,2" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
+                    <CheckBox x:Name="SinglelineCheckBox" Style="{StaticResource RegexOptionCheckBoxStyle}" Content="Singleline"/>
+                    <CheckBox x:Name="ECMAScriptCheckBox" Style="{StaticResource RegexOptionCheckBoxStyle}" Content="ECMAScript"/>
+                    <CheckBox x:Name="CompiledCheckBox" Style="{StaticResource RegexOptionCheckBoxStyle}" Content="Compiled" Margin="0,2,0,2"/>
 
-                    <CheckBox x:Name="MultilineCheckBox" Content="Multiline" Margin="0,2,12,2" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
-                    <CheckBox x:Name="CultureInvariantCheckBox" Content="CultureInvariant" Margin="0,2,12,2" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
-                    <CheckBox x:Name="IgnorePatternWhitespace" Content="IgnorePatternWhitespace" Margin="0,2,0,2" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged"/>
+                    <CheckBox x:Name="MultilineCheckBox" Style="{StaticResource RegexOptionCheckBoxStyle}" Content="Multiline"/>
+                    <CheckBox x:Name="CultureInvariantCheckBox" Style="{StaticResource RegexOptionCheckBoxStyle}" Content="CultureInvariant"/>
+                    <CheckBox x:Name="IgnorePatternWhitespace" Style="{StaticResource RegexOptionCheckBoxStyle}" Content="IgnorePatternWhitespace" Margin="0,2,0,2"/>
 
-                    <CheckBox x:Name="NonBacktrackingCheckBox" Content="NonBacktracking" Margin="0,2,12,2" Checked="Checkbox_CheckChanged" Unchecked="Checkbox_CheckChanged" ToolTip="Guarantees linear-time matching in .NET 7+ (incompatible with RightToLeft and ECMAScript)"/>
+                    <CheckBox x:Name="NonBacktrackingCheckBox" Style="{StaticResource RegexOptionCheckBoxStyle}" Content="NonBacktracking" ToolTip="Guarantees linear-time matching in .NET 7+ (incompatible with RightToLeft and ECMAScript)"/>
                 </UniformGrid>
             </GroupBox>
         </Grid>
@@ -175,37 +196,22 @@
                 <Label x:Name="TestDataLabel" Grid.Row="0" Content="Test Data" Padding="0,2,0,4" FontWeight="Bold"/>
                 <AdornerDecorator Grid.Row="1">
                     <TextBox x:Name="DataTextBox"
-                             TextWrapping="Wrap"
-                             TextChanged="TextBox_TextChanged"
-                             AcceptsReturn="True"
+                             Style="{StaticResource MonospaceTextBoxStyle}"
                              HorizontalScrollBarVisibility="Auto"
-                             VerticalScrollBarVisibility="Auto"
-                             FontFamily="Consolas"
-                             FontSize="14"
-                             Padding="4"/>
+                             TextChanged="TextBox_TextChanged"/>
                 </AdornerDecorator>
 
                 <Label x:Name="ReplacementTextLabel" Grid.Row="2" Content="Replacement Text" Padding="0,8,0,4" FontWeight="Bold"/>
                 <TextBox x:Name="ReplacementTextTextBox"
                          Grid.Row="3"
+                         Style="{StaticResource MonospaceTextBoxStyle}"
                          Height="56"
-                         TextWrapping="Wrap"
-                         AcceptsReturn="True"
-                         TextChanged="TextBox_TextChanged"
-                         VerticalScrollBarVisibility="Auto"
-                         FontFamily="Consolas"
-                         FontSize="14"
-                         Padding="4"/>
+                         TextChanged="TextBox_TextChanged"/>
 
                 <Label x:Name="ReplacementResultsLabel" Grid.Row="4" Content="Replacement Results" Padding="0,8,0,4" FontWeight="Bold"/>
                 <TextBox x:Name="ReplacementResultsTextBox"
                          Grid.Row="5"
-                         TextWrapping="Wrap"
-                         AcceptsReturn="True"
-                         VerticalScrollBarVisibility="Auto"
-                         FontFamily="Consolas"
-                         FontSize="14"
-                         Padding="4"
+                         Style="{StaticResource MonospaceTextBoxStyle}"
                          IsReadOnly="True"/>
             </Grid>
 

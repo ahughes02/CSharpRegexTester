@@ -2,10 +2,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
+using CSharpRegexTester.Models;
 
-namespace CSharpRegexTester;
-
-public readonly record struct TextSpan(int Index, int Length);
+namespace CSharpRegexTester.Controls;
 
 /// <summary>
 /// Renders inline highlights over matched character ranges inside a WPF TextBox.
@@ -127,7 +126,7 @@ public sealed class RegexMatchHighlightAdorner : Adorner
             return;
         }
 
-        // Multi-line span: draw per-character or per-line segments
+        // Multi-line span: draw per-line segments
         Rect currentLineRect = startRect;
         for (int i = startIndex; i < endIndex; i++)
         {
