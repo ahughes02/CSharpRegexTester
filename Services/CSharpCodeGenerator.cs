@@ -8,7 +8,11 @@ namespace CSharpRegexTester.Services;
 /// </summary>
 public static class CSharpCodeGenerator
 {
-    public static string GenerateSnippet(string pattern, string replacement, RegexOptions options)
+    public static string GenerateSnippet(
+        string pattern,
+        string replacement,
+        RegexOptions options,
+        TimeSpan? matchTimeout = null)
     {
         ArgumentNullException.ThrowIfNull(pattern);
         ArgumentNullException.ThrowIfNull(replacement);
@@ -17,13 +21,30 @@ public static class CSharpCodeGenerator
 
         // [GeneratedRegex] is already compile-time generated, so RegexOptions.Compiled is redundant there (SYSLIB1045).
         RegexOptions generatedRegexOptions = options & ~RegexOptions.Compiled;
-        string generatedOptionsArg = generatedRegexOptions == RegexOptions.None
-            ? string.Empty
-            : $", {FormatRegexOptionsExpression(generatedRegexOptions)}";
+        string generatedOptionsArg;
+        string runtimeOptionsArg;
 
-        string runtimeOptionsArg = options == RegexOptions.None
-            ? string.Empty
-            : $", {FormatRegexOptionsExpression(options)}";
+        if (matchTimeout.HasValue)
+        {
+            int timeoutMs = Math.Max(1, (int)matchTimeout.Value.TotalMilliseconds);
+            generatedOptionsArg = generatedRegexOptions == RegexOptions.None
+                ? $", matchTimeoutMilliseconds: {timeoutMs}"
+                : $", {FormatRegexOptionsExpression(generatedRegexOptions)}, matchTimeoutMilliseconds: {timeoutMs}";
+
+            runtimeOptionsArg = options == RegexOptions.None
+                ? $", RegexOptions.None, TimeSpan.FromMilliseconds({timeoutMs})"
+                : $", {FormatRegexOptionsExpression(options)}, TimeSpan.FromMilliseconds({timeoutMs})";
+        }
+        else
+        {
+            generatedOptionsArg = generatedRegexOptions == RegexOptions.None
+                ? string.Empty
+                : $", {FormatRegexOptionsExpression(generatedRegexOptions)}";
+
+            runtimeOptionsArg = options == RegexOptions.None
+                ? string.Empty
+                : $", {FormatRegexOptionsExpression(options)}";
+        }
 
         var sb = new StringBuilder();
         sb.AppendLine("using System.Text.RegularExpressions;");

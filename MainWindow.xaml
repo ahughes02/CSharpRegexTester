@@ -182,6 +182,17 @@
                     <CheckBox x:Name="IgnorePatternWhitespace" Style="{StaticResource RegexOptionCheckBoxStyle}" Content="IgnorePatternWhitespace" Margin="0,2,0,2"/>
 
                     <CheckBox x:Name="NonBacktrackingCheckBox" Style="{StaticResource RegexOptionCheckBoxStyle}" Content="NonBacktracking" ToolTip="Guarantees linear-time matching in .NET 7+ (incompatible with RightToLeft and ECMAScript)"/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,2,0,2">
+                        <TextBlock Text="Timeout:" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                        <ComboBox x:Name="TimeoutComboBox"
+                                  Width="56"
+                                  Height="22"
+                                  IsEditable="True"
+                                  ToolTip="Regex execution timeout in seconds (0.1s to 300s, e.g. 0.5, 1, 2, 5, 10, 30)"
+                                  SelectionChanged="TimeoutComboBox_SelectionChanged"
+                                  TextBoxBase.TextChanged="TimeoutComboBox_TextChanged"/>
+                        <TextBlock Text="s" VerticalAlignment="Center" Margin="3,0,0,0"/>
+                    </StackPanel>
                 </UniformGrid>
             </GroupBox>
         </Grid>

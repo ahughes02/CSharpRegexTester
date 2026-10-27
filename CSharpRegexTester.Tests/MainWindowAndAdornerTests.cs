@@ -130,6 +130,7 @@ public class MainWindowAndAdornerTests
                 SelectedOptions = RegexOptions.IgnoreCase | RegexOptions.Multiline,
                 ExpandCaptures = true,
                 ExpandGroups = true,
+                TimeoutSeconds = 5.0,
                 ExpressionList = [@"(?<word>\w+)", @"\d+"]
             });
 
@@ -142,6 +143,34 @@ public class MainWindowAndAdornerTests
             Assert.Equal("Hello 123", window.DataTextBox.Text);
             Assert.True(window.IgnoreCaseCheckBox.IsChecked);
             Assert.True(window.MultilineCheckBox.IsChecked);
+            Assert.Equal("5", window.TimeoutComboBox.Text);
+            Assert.Equal(TimeSpan.FromSeconds(5), window.GetConfiguredTimeout());
+
+            // Test GetConfiguredTimeout parsing edge cases
+            window.TimeoutComboBox.Text = "10";
+            Assert.Equal(TimeSpan.FromSeconds(10), window.GetConfiguredTimeout());
+            window.TimeoutComboBox.Text = "0.5";
+            Assert.Equal(TimeSpan.FromSeconds(0.5), window.GetConfiguredTimeout());
+            window.TimeoutComboBox.Text = "invalid";
+            Assert.Equal(RegexEvaluatorService.DefaultTimeout, window.GetConfiguredTimeout());
+            window.TimeoutComboBox.Text = "-1";
+            Assert.Equal(RegexEvaluatorService.DefaultTimeout, window.GetConfiguredTimeout());
+            window.TimeoutComboBox.Text = "999";
+            Assert.Equal(RegexEvaluatorService.DefaultTimeout, window.GetConfiguredTimeout());
+            window.TimeoutComboBox.Text = "";
+            Assert.Equal(RegexEvaluatorService.DefaultTimeout, window.GetConfiguredTimeout());
+
+            // Test TimeoutComboBox events
+            InvokePrivate(
+                window,
+                "TimeoutComboBox_SelectionChanged",
+                window.TimeoutComboBox,
+                new SelectionChangedEventArgs(ComboBox.SelectionChangedEvent, Array.Empty<object>(), Array.Empty<object>()));
+            InvokePrivate(
+                window,
+                "TimeoutComboBox_TextChanged",
+                window.TimeoutComboBox,
+                new TextChangedEventArgs(TextBox.TextChangedEvent, UndoAction.None));
 
             // Test DisplayResults with matches and non-matching optional groups
             RegexEvaluationResult matchResult = RegexEvaluatorService.Evaluate(
@@ -267,6 +296,7 @@ public class MainWindowAndAdornerTests
             InvokePrivate(window, "ClearAllButton_Click", window.ClearAllButton, new RoutedEventArgs());
             Assert.Equal(string.Empty, window.ExpressionTextBox.Text);
             Assert.False(window.IgnoreCaseCheckBox.IsChecked);
+            Assert.Equal("2", window.TimeoutComboBox.Text);
 
             // Test SaveExpressionButton_Click when expression is empty
             InvokePrivate(window, "SaveExpressionButton_Click", window.SaveExpressionButton, new RoutedEventArgs());
@@ -285,7 +315,7 @@ public class MainWindowAndAdornerTests
             WaitWithDispatcher((Task)InvokePrivate(window, "SetupAndRunRegexWorkerAsync")!);
 
             // Test TextBox_TextChanged and DebounceTimer_Tick
-            window.DataTextBox.Text = "New Data Triggering Debounce";
+            window.DataTextBox.Text = "Example";
             InvokePrivate(window, "DebounceTimer_Tick", window, EventArgs.Empty);
 
             // Test Window_Closing saves configuration

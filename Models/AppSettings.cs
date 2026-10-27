@@ -14,4 +14,5 @@ public sealed class AppSettings
     public RegexOptions SelectedOptions { get; set; } = RegexOptions.None;
     public bool ExpandCaptures { get; set; }
     public bool ExpandGroups { get; set; }
+    public double TimeoutSeconds { get; set; } = 2.0;
 }

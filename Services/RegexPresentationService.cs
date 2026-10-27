@@ -20,7 +20,8 @@ public static class RegexPresentationService
         RegexOptions options,
         bool expandCaptures,
         bool expandGroups,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        TimeSpan? matchTimeout = null)
     {
         ArgumentNullException.ThrowIfNull(result);
 
@@ -45,7 +46,7 @@ public static class RegexPresentationService
         }
 
         // 2. Format C# Snippet
-        string csharpSnippet = CSharpCodeGenerator.GenerateSnippet(pattern, replacement, options);
+        string csharpSnippet = CSharpCodeGenerator.GenerateSnippet(pattern, replacement, options, matchTimeout);
 
         double elapsedMs = result.Elapsed.TotalMilliseconds;
 
@@ -179,7 +180,7 @@ public static class RegexPresentationService
             ],
             isExpanded: true);
 
-        string snippet = CSharpCodeGenerator.GenerateSnippet(pattern, replacement, options);
+        string snippet = CSharpCodeGenerator.GenerateSnippet(pattern, replacement, options, ex.MatchTimeout);
 
         return new RegexDisplayModel(
             TreeNodes: [treeNode],
@@ -195,7 +196,8 @@ public static class RegexPresentationService
         Exception ex,
         string pattern,
         string replacement,
-        RegexOptions options)
+        RegexOptions options,
+        TimeSpan? matchTimeout = null)
     {
         var treeNode = new MatchTreeNode(
             "Exception",
@@ -207,7 +209,7 @@ public static class RegexPresentationService
             ],
             isExpanded: true);
 
-        string snippet = CSharpCodeGenerator.GenerateSnippet(pattern, replacement, options);
+        string snippet = CSharpCodeGenerator.GenerateSnippet(pattern, replacement, options, matchTimeout);
 
         return new RegexDisplayModel(
             TreeNodes: [treeNode],

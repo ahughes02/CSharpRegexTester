@@ -56,4 +56,24 @@ public class CSharpCodeGeneratorTests
         Assert.Contains("var regex = new Regex(@\"\\d+\", RegexOptions.IgnoreCase | RegexOptions.Compiled);", withReplacement);
         Assert.Contains("string replaced = regex.Replace(input, @\"#\");", withReplacement);
     }
+
+    [Fact]
+    public void GenerateSnippet_WithTimeout_ProducesTimeoutParameters()
+    {
+        string withTimeoutNoOptions = CSharpCodeGenerator.GenerateSnippet(
+            @"\d+",
+            string.Empty,
+            RegexOptions.None,
+            TimeSpan.FromSeconds(3));
+        Assert.Contains("matchTimeoutMilliseconds: 3000", withTimeoutNoOptions);
+        Assert.Contains("TimeSpan.FromMilliseconds(3000)", withTimeoutNoOptions);
+
+        string withTimeoutAndOptions = CSharpCodeGenerator.GenerateSnippet(
+            @"\d+",
+            string.Empty,
+            RegexOptions.IgnoreCase,
+            TimeSpan.FromSeconds(5));
+        Assert.Contains("RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 5000", withTimeoutAndOptions);
+        Assert.Contains("RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(5000)", withTimeoutAndOptions);
+    }
 }

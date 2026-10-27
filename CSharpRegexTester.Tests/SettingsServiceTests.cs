@@ -23,6 +23,7 @@ public class SettingsServiceTests
                 SelectedOptions = RegexOptions.IgnoreCase | RegexOptions.Multiline,
                 ExpandCaptures = true,
                 ExpandGroups = true,
+                TimeoutSeconds = 5.5,
                 ExpressionList = [@"\d+", @"\w+"]
             };
 
@@ -36,6 +37,7 @@ public class SettingsServiceTests
             Assert.Equal(expected.SelectedOptions, loaded.SelectedOptions);
             Assert.True(loaded.ExpandCaptures);
             Assert.True(loaded.ExpandGroups);
+            Assert.Equal(5.5, loaded.TimeoutSeconds);
             Assert.Equal(expected.ExpressionList, loaded.ExpressionList);
         }
         finally

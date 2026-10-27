@@ -18,7 +18,7 @@ Originally inspired by [regex-freetool](https://code.google.com/archive/p/regex-
 - **Full `RegexOptions` Support**: Toggle `IgnoreCase`, `Multiline`, `Singleline`, `ExplicitCapture`, `IgnorePatternWhitespace`, `RightToLeft`, `ECMAScript`, `CultureInvariant`, `Compiled`, and `.NET 7+` `NonBacktracking`.
 - **Caret-Aware Quick-Insert Toolbar**: Insert common tokens (`^`, `$`, `\w`, `\d`, `\s`, `\b`, `[a-z]`, `[^...]`) at the cursor, or highlight part of your pattern and click `(...)`, `(?:...)`, `(?<n>)`, `(?=...)`, or `(?<=...)` to wrap the selection.
 - **Saved Patterns & Session Persistence**: Automatically persists your current expression, test data, replacement text, selected `RegexOptions`, and saved pattern history to `%LocalAppData%\CSharpRegexTester\RegExTester.cfg`.
-- **Catastrophic Backtracking Protection**: Enforces a 2-second evaluation timeout so incomplete or backtracking-heavy patterns never freeze the UI.
+- **Catastrophic Backtracking Protection & Configurable Timeout**: Enforces a user-configurable evaluation timeout (defaults to 2 seconds, with selectable presets or custom seconds from 0.1s to 300s) so incomplete or backtracking-heavy patterns never freeze the UI. Timeout values are automatically included in the generated C# code snippets.
 
 ---
 
