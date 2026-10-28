@@ -254,14 +254,21 @@ public static class RegexPresentationService
         {
             foreach (MatchTreeNode matchNode in root.Children)
             {
-                if (matchNode.Children.Count >= 1 && matchNode.Children[0].NodeType == MatchTreeNodeType.CapturesContainer)
+                if (matchNode.NodeType != MatchTreeNodeType.Match)
                 {
-                    matchNode.Children[0].IsExpanded = expandCaptures;
+                    continue;
                 }
 
-                if (matchNode.Children.Count >= 2 && matchNode.Children[1].NodeType == MatchTreeNodeType.GroupsContainer)
+                foreach (MatchTreeNode child in matchNode.Children)
                 {
-                    matchNode.Children[1].IsExpanded = expandGroups;
+                    if (child.NodeType == MatchTreeNodeType.CapturesContainer)
+                    {
+                        child.IsExpanded = expandCaptures;
+                    }
+                    else if (child.NodeType == MatchTreeNodeType.GroupsContainer)
+                    {
+                        child.IsExpanded = expandGroups;
+                    }
                 }
             }
         }

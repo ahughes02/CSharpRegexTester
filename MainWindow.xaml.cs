@@ -256,11 +256,9 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (!savedExpressions.Contains(expr))
-        {
-            savedExpressions.Insert(0, expr);
-            RefreshSavedExpressionsComboBox();
-        }
+        savedExpressions.Remove(expr);
+        savedExpressions.Insert(0, expr);
+        RefreshSavedExpressionsComboBox();
 
         SavedExpressionsComboBox.SelectedItem = expr;
         SaveConfiguration();
@@ -320,7 +318,6 @@ public partial class MainWindow : Window
     private void SaveAndExitButton_Click(object sender, RoutedEventArgs e)
     {
         Close();
-        Application.Current?.Shutdown();
     }
 
     private void Window_Closing(object? sender, CancelEventArgs e)

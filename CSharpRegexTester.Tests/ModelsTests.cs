@@ -65,5 +65,6 @@ public class ModelsTests
         Assert.Equal(RegexOptions.None, settings.SelectedOptions);
         Assert.False(settings.ExpandCaptures);
         Assert.False(settings.ExpandGroups);
+        Assert.Equal(2.0, settings.TimeoutSeconds);
     }
 }

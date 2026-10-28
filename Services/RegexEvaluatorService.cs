@@ -30,7 +30,7 @@ public static class RegexEvaluatorService
         var regex = new Regex(pattern, options, matchTimeout ?? DefaultTimeout);
         MatchCollection matches = regex.Matches(input);
 
-        var matchSnapshots = new List<MatchSnapshot>();
+        var matchSnapshots = new List<MatchSnapshot>(matches.Count);
 
         for (int i = 0; i < matches.Count; i++)
         {

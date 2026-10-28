@@ -97,10 +97,35 @@ public sealed class RegexMatchHighlightAdorner : Adorner
         {
             int textLength = textBox.Text.Length;
 
+            // Determine visible character range to skip off-screen layout queries
+            int firstVisibleLine = textBox.GetFirstVisibleLineIndex();
+            int lastVisibleLine = textBox.GetLastVisibleLineIndex();
+            int visibleStartChar = -1;
+            int visibleEndChar = -1;
+
+            if (firstVisibleLine >= 0 && lastVisibleLine >= firstVisibleLine)
+            {
+                visibleStartChar = textBox.GetCharacterIndexFromLineIndex(firstVisibleLine);
+                int lastLineStart = textBox.GetCharacterIndexFromLineIndex(lastVisibleLine);
+                if (lastLineStart >= 0)
+                {
+                    visibleEndChar = lastLineStart + textBox.GetLineLength(lastVisibleLine);
+                }
+            }
+
             int count = Math.Min(matchSpans.Count, MaxRenderMatches);
             for (int i = 0; i < count; i++)
             {
-                DrawSpan(drawingContext, matchSpans[i], textLength, viewportRect, MatchFillBrush, MatchBorderPen);
+                TextSpan span = matchSpans[i];
+                if (visibleStartChar >= 0 && visibleEndChar >= visibleStartChar)
+                {
+                    if (span.Index + span.Length < visibleStartChar || span.Index > visibleEndChar)
+                    {
+                        continue;
+                    }
+                }
+
+                DrawSpan(drawingContext, span, textLength, viewportRect, MatchFillBrush, MatchBorderPen);
             }
 
             if (selectedSpan is { } active)

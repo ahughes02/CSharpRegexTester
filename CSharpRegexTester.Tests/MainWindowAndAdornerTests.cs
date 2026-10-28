@@ -1,3 +1,4 @@
+using System.IO;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Windows;
@@ -105,8 +106,17 @@ public class MainWindowAndAdornerTests
                 onRender.Invoke(adorner, [dc]);
             }
 
-            // Also test empty render branch
+            // Also test empty render branch and small bounds early return
             adorner.UpdateHighlights([]);
+            using (DrawingContext dc = drawingGroup.Open())
+            {
+                MethodInfo? onRender = typeof(RegexMatchHighlightAdorner)
+                    .GetMethod("OnRender", BindingFlags.Instance | BindingFlags.NonPublic);
+                onRender!.Invoke(adorner, [dc]);
+            }
+
+            textBox.Measure(new Size(2, 2));
+            textBox.Arrange(new Rect(0, 0, 2, 2));
             using (DrawingContext dc = drawingGroup.Open())
             {
                 MethodInfo? onRender = typeof(RegexMatchHighlightAdorner)
@@ -135,6 +145,9 @@ public class MainWindowAndAdornerTests
             });
 
             var window = new MainWindow();
+            window.Measure(new Size(1120, 720));
+            window.Arrange(new Rect(0, 0, 1120, 720));
+            window.UpdateLayout();
 
             // Invoke MainWindow_Loaded
             InvokePrivate(window, "MainWindow_Loaded", window, new RoutedEventArgs());
@@ -158,6 +171,9 @@ public class MainWindowAndAdornerTests
             window.TimeoutComboBox.Text = "999";
             Assert.Equal(RegexEvaluatorService.DefaultTimeout, window.GetConfiguredTimeout());
             window.TimeoutComboBox.Text = "";
+            window.TimeoutComboBox.SelectedItem = "10";
+            Assert.Equal(TimeSpan.FromSeconds(10), window.GetConfiguredTimeout());
+            window.TimeoutComboBox.SelectedItem = null;
             Assert.Equal(RegexEvaluatorService.DefaultTimeout, window.GetConfiguredTimeout());
 
             // Test TimeoutComboBox events
@@ -280,6 +296,11 @@ public class MainWindowAndAdornerTests
             InvokePrivate(window, "SaveExpressionButton_Click", window.SaveExpressionButton, new RoutedEventArgs());
             Assert.Equal("(abc)", window.SavedExpressionsComboBox.SelectedItem);
 
+            // Re-saving existing expression promotes to top of MRU
+            window.ExpressionTextBox.Text = @"(?<word>\w+)";
+            InvokePrivate(window, "SaveExpressionButton_Click", window.SaveExpressionButton, new RoutedEventArgs());
+            Assert.Equal(@"(?<word>\w+)", window.SavedExpressionsComboBox.Items[0]);
+
             InvokePrivate(
                 window,
                 "SavedExpressionsComboBox_SelectionChanged",
@@ -287,6 +308,16 @@ public class MainWindowAndAdornerTests
                 new SelectionChangedEventArgs(ComboBox.SelectionChangedEvent, Array.Empty<object>(), Array.Empty<object>()));
 
             InvokePrivate(window, "RemoveSavedExpressionButton_Click", window.RemoveSavedExpressionButton, new RoutedEventArgs());
+
+            // Test UpdateTreeExpansionInPlace with empty tree
+            window.MatchesTreeView.ItemsSource = null;
+            InvokePrivate(window, "UpdateTreeExpansionInPlace");
+
+            // Test TimeoutComboBox_TextChanged when stopWork is true
+            FieldInfo? stopWorkField = typeof(MainWindow).GetField("stopWork", BindingFlags.Instance | BindingFlags.NonPublic);
+            stopWorkField?.SetValue(window, true);
+            InvokePrivate(window, "TimeoutComboBox_TextChanged", window.TimeoutComboBox, new TextChangedEventArgs(TextBox.TextChangedEvent, UndoAction.None));
+            stopWorkField?.SetValue(window, false);
 
             // Test CopyCSharpButton_Click
             InvokePrivate(window, "CopyCSharpButton_Click", window.CopyCSharpButton, new RoutedEventArgs());
@@ -302,7 +333,7 @@ public class MainWindowAndAdornerTests
             InvokePrivate(window, "SaveExpressionButton_Click", window.SaveExpressionButton, new RoutedEventArgs());
             Assert.Equal("Enter a regular expression before saving.", window.StatusTextBlock.Text);
 
-            // Test async evaluation pipeline (valid, invalid, and empty inputs)
+            // Test async evaluation pipeline (valid, invalid, expression without data, and empty inputs)
             window.ExpressionTextBox.Text = @"(?<word>\w+)";
             window.DataTextBox.Text = "Async Test 42";
             WaitWithDispatcher((Task)InvokePrivate(window, "SetupAndRunRegexWorkerAsync")!);
@@ -311,6 +342,11 @@ public class MainWindowAndAdornerTests
             WaitWithDispatcher((Task)InvokePrivate(window, "SetupAndRunRegexWorkerAsync")!);
             Assert.Equal("Invalid Pattern", window.MatchSummaryTextBlock.Text);
 
+            window.ExpressionTextBox.Text = @"\d+";
+            window.DataTextBox.Text = string.Empty;
+            WaitWithDispatcher((Task)InvokePrivate(window, "SetupAndRunRegexWorkerAsync")!);
+            Assert.Contains("[GeneratedRegex", window.CSharpSnippetTextBox.Text);
+
             window.ExpressionTextBox.Text = string.Empty;
             WaitWithDispatcher((Task)InvokePrivate(window, "SetupAndRunRegexWorkerAsync")!);
 
@@ -318,8 +354,31 @@ public class MainWindowAndAdornerTests
             window.DataTextBox.Text = "Example";
             InvokePrivate(window, "DebounceTimer_Tick", window, EventArgs.Empty);
 
-            // Test Window_Closing saves configuration
+            // Test SaveAndExitButton_Click and Window_Closing
+            InvokePrivate(window, "SaveAndExitButton_Click", window.SaveAndExitButton, new RoutedEventArgs());
             InvokePrivate(window, "Window_Closing", window, new System.ComponentModel.CancelEventArgs());
+
+            // Test fresh window load when config file is absent
+            string configPath = SettingsService.AppDataConfigPath;
+            string? backup = null;
+            if (File.Exists(configPath))
+            {
+                backup = File.ReadAllText(configPath);
+                File.Delete(configPath);
+            }
+            try
+            {
+                var freshWindow = new MainWindow();
+                InvokePrivate(freshWindow, "MainWindow_Loaded", freshWindow, new RoutedEventArgs());
+                Assert.Equal("2", freshWindow.TimeoutComboBox.Text);
+            }
+            finally
+            {
+                if (backup is not null)
+                {
+                    File.WriteAllText(configPath, backup);
+                }
+            }
         });
     }
 

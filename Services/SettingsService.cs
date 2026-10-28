@@ -38,7 +38,7 @@ public static class SettingsService
 
         try
         {
-            using FileStream configStream = File.OpenRead(pathToLoad);
+            using var configStream = new FileStream(pathToLoad, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             return JsonSerializer.Deserialize<AppSettings>(configStream, JsonOptions);
         }
         catch (Exception)
@@ -67,9 +67,16 @@ public static class SettingsService
         }
         catch (Exception)
         {
-            using FileStream fallbackStream = File.Create(ConfigFileName);
-            JsonSerializer.Serialize(fallbackStream, settings, JsonOptions);
-            fallbackStream.Flush();
+            try
+            {
+                using FileStream fallbackStream = File.Create(ConfigFileName);
+                JsonSerializer.Serialize(fallbackStream, settings, JsonOptions);
+                fallbackStream.Flush();
+            }
+            catch (Exception)
+            {
+                // Silently ignore if both AppData and local directory are not writable (e.g. read-only environments)
+            }
         }
     }
 }
