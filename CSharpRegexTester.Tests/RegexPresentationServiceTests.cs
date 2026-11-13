@@ -225,6 +225,31 @@ public class RegexPresentationServiceTests
         Assert.Single(loadingModel.TreeNodes);
         Assert.Equal("Working...", loadingModel.TreeNodes[0].Header);
         Assert.Equal("Evaluating regular expression...", loadingModel.StatusMessage);
+        Assert.Null(loadingModel.CSharpSnippet);
+    }
+
+    [Fact]
+    public void BuildModel_WithRightToLeft_ProducesAscendingHighlightSpans()
+    {
+        RegexEvaluationResult rtlResult = RegexEvaluatorService.Evaluate(
+            @"\w+",
+            "one two three",
+            "",
+            RegexOptions.RightToLeft);
+
+        RegexDisplayModel model = RegexPresentationService.BuildModel(
+            rtlResult,
+            @"\w+",
+            "",
+            RegexOptions.RightToLeft,
+            expandCaptures: false,
+            expandGroups: false);
+
+        // Tree preserves evaluation order ("three" first), while HighlightSpans are ascending by index
+        Assert.Contains("three", model.TreeNodes[0].Children[0].Header);
+        Assert.Equal(3, model.HighlightSpans.Count);
+        Assert.True(model.HighlightSpans[0].Index < model.HighlightSpans[1].Index);
+        Assert.True(model.HighlightSpans[1].Index < model.HighlightSpans[2].Index);
     }
 
     [Fact]

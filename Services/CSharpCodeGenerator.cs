@@ -27,13 +27,10 @@ public static class CSharpCodeGenerator
         if (matchTimeout.HasValue)
         {
             int timeoutMs = Math.Max(1, (int)matchTimeout.Value.TotalMilliseconds);
-            generatedOptionsArg = generatedRegexOptions == RegexOptions.None
-                ? $", matchTimeoutMilliseconds: {timeoutMs}"
-                : $", {FormatRegexOptionsExpression(generatedRegexOptions)}, matchTimeoutMilliseconds: {timeoutMs}";
+            // GeneratedRegexAttribute has no (string, int) overload; RegexOptions must precede matchTimeoutMilliseconds.
+            generatedOptionsArg = $", {FormatRegexOptionsExpression(generatedRegexOptions)}, matchTimeoutMilliseconds: {timeoutMs}";
 
-            runtimeOptionsArg = options == RegexOptions.None
-                ? $", RegexOptions.None, TimeSpan.FromMilliseconds({timeoutMs})"
-                : $", {FormatRegexOptionsExpression(options)}, TimeSpan.FromMilliseconds({timeoutMs})";
+            runtimeOptionsArg = $", {FormatRegexOptionsExpression(options)}, TimeSpan.FromMilliseconds({timeoutMs})";
         }
         else
         {

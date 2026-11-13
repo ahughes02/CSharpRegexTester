@@ -16,6 +16,10 @@ public static class SettingsService
         "CSharpRegexTester",
         ConfigFileName);
 
+    public static readonly string FallbackConfigPath = Path.Combine(
+        AppContext.BaseDirectory,
+        ConfigFileName);
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true
@@ -27,8 +31,8 @@ public static class SettingsService
             ? (File.Exists(customPath) ? customPath : null)
             : File.Exists(AppDataConfigPath)
                 ? AppDataConfigPath
-                : File.Exists(ConfigFileName)
-                    ? ConfigFileName
+                : File.Exists(FallbackConfigPath)
+                    ? FallbackConfigPath
                     : null;
 
         if (pathToLoad is null)
@@ -47,12 +51,17 @@ public static class SettingsService
         }
     }
 
-    public static void Save(AppSettings settings, string? customPath = null)
+    public static bool Save(AppSettings settings, string? customPath = null)
     {
         ArgumentNullException.ThrowIfNull(settings);
 
         string targetPath = customPath ?? AppDataConfigPath;
+        return TryWriteAtomic(targetPath, settings) || TryWriteAtomic(FallbackConfigPath, settings);
+    }
 
+    private static bool TryWriteAtomic(string targetPath, AppSettings settings)
+    {
+        string? tempPath = null;
         try
         {
             string? directory = Path.GetDirectoryName(targetPath);
@@ -61,21 +70,39 @@ public static class SettingsService
                 Directory.CreateDirectory(directory);
             }
 
-            using FileStream configStream = File.Create(targetPath);
-            JsonSerializer.Serialize(configStream, settings, JsonOptions);
-            configStream.Flush();
+            string fileName = Path.GetFileName(targetPath);
+            if (string.IsNullOrEmpty(fileName) || targetPath.IndexOfAny(Path.GetInvalidPathChars()) >= 0)
+            {
+                return false;
+            }
+
+            tempPath = Path.Combine(directory ?? AppContext.BaseDirectory, $".{fileName}.{Guid.NewGuid():N}.tmp");
+            using (FileStream configStream = File.Create(tempPath))
+            {
+                JsonSerializer.Serialize(configStream, settings, JsonOptions);
+                configStream.Flush();
+            }
+
+            File.Move(tempPath, targetPath, overwrite: true);
+            tempPath = null;
+            return true;
         }
         catch (Exception)
         {
-            try
+            return false;
+        }
+        finally
+        {
+            if (tempPath is not null && File.Exists(tempPath))
             {
-                using FileStream fallbackStream = File.Create(ConfigFileName);
-                JsonSerializer.Serialize(fallbackStream, settings, JsonOptions);
-                fallbackStream.Flush();
-            }
-            catch (Exception)
-            {
-                // Silently ignore if both AppData and local directory are not writable (e.g. read-only environments)
+                try
+                {
+                    File.Delete(tempPath);
+                }
+                catch (Exception)
+                {
+                    // Best-effort cleanup of orphaned temp file
+                }
             }
         }
     }

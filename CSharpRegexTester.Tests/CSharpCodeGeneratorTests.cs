@@ -58,22 +58,31 @@ public class CSharpCodeGeneratorTests
     }
 
     [Fact]
-    public void GenerateSnippet_WithTimeout_ProducesTimeoutParameters()
+    public void GenerateSnippet_WithTimeout_ProducesValidCompileableOverloads()
     {
         string withTimeoutNoOptions = CSharpCodeGenerator.GenerateSnippet(
             @"\d+",
             string.Empty,
             RegexOptions.None,
             TimeSpan.FromSeconds(3));
-        Assert.Contains("matchTimeoutMilliseconds: 3000", withTimeoutNoOptions);
-        Assert.Contains("TimeSpan.FromMilliseconds(3000)", withTimeoutNoOptions);
+        Assert.Contains(@"[GeneratedRegex(@""\d+"", RegexOptions.None, matchTimeoutMilliseconds: 3000)]", withTimeoutNoOptions);
+        Assert.Contains(@"var regex = new Regex(@""\d+"", RegexOptions.None, TimeSpan.FromMilliseconds(3000));", withTimeoutNoOptions);
+
+        string withTimeoutCompiledOnly = CSharpCodeGenerator.GenerateSnippet(
+            @"\d+",
+            "val \"x\"\n",
+            RegexOptions.Compiled,
+            TimeSpan.FromSeconds(2));
+        Assert.Contains(@"[GeneratedRegex(@""\d+"", RegexOptions.None, matchTimeoutMilliseconds: 2000)]", withTimeoutCompiledOnly);
+        Assert.Contains(@"var regex = new Regex(@""\d+"", RegexOptions.Compiled, TimeSpan.FromMilliseconds(2000));", withTimeoutCompiledOnly);
+        Assert.Contains("\"\"\"\r\nval \"x\"\n\r\n\"\"\"", withTimeoutCompiledOnly);
 
         string withTimeoutAndOptions = CSharpCodeGenerator.GenerateSnippet(
             @"\d+",
             string.Empty,
             RegexOptions.IgnoreCase,
             TimeSpan.FromSeconds(5));
-        Assert.Contains("RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 5000", withTimeoutAndOptions);
-        Assert.Contains("RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(5000)", withTimeoutAndOptions);
+        Assert.Contains(@"[GeneratedRegex(@""\d+"", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 5000)]", withTimeoutAndOptions);
+        Assert.Contains(@"var regex = new Regex(@""\d+"", RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(5000));", withTimeoutAndOptions);
     }
 }

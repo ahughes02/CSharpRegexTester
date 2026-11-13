@@ -21,6 +21,7 @@ public sealed class RegexMatchHighlightAdorner : Adorner
     private readonly TextBox textBox;
     private readonly Func<int, bool, Rect> getCharacterRect;
     private IReadOnlyList<TextSpan> matchSpans = [];
+    private bool spansAreAscendingNonOverlapping;
     private TextSpan? selectedSpan;
 
     static RegexMatchHighlightAdorner()
@@ -60,6 +61,7 @@ public sealed class RegexMatchHighlightAdorner : Adorner
     public void UpdateHighlights(IReadOnlyList<TextSpan> spans, TextSpan? activeSpan = null)
     {
         matchSpans = spans;
+        spansAreAscendingNonOverlapping = AreAscendingNonOverlapping(spans);
         selectedSpan = activeSpan;
         InvalidateVisual();
     }
@@ -113,19 +115,38 @@ public sealed class RegexMatchHighlightAdorner : Adorner
                 }
             }
 
-            int count = Math.Min(matchSpans.Count, MaxRenderMatches);
-            for (int i = 0; i < count; i++)
+            int startIndex = 0;
+            bool hasVisibleRange = visibleStartChar >= 0 && visibleEndChar >= visibleStartChar;
+            if (hasVisibleRange && spansAreAscendingNonOverlapping && matchSpans.Count > 0)
+            {
+                startIndex = FindFirstVisibleCandidate(matchSpans, visibleStartChar);
+            }
+
+            int renderedCount = 0;
+            for (int i = startIndex; i < matchSpans.Count && renderedCount < MaxRenderMatches; i++)
             {
                 TextSpan span = matchSpans[i];
-                if (visibleStartChar >= 0 && visibleEndChar >= visibleStartChar)
+                if (hasVisibleRange)
                 {
-                    if (span.Index + span.Length < visibleStartChar || span.Index > visibleEndChar)
+                    if (span.Index > visibleEndChar)
+                    {
+                        if (spansAreAscendingNonOverlapping)
+                        {
+                            break;
+                        }
+                        continue;
+                    }
+
+                    if (span.Index + span.Length < visibleStartChar)
                     {
                         continue;
                     }
                 }
 
-                DrawSpan(drawingContext, span, textLength, viewportRect, MatchFillBrush, MatchBorderPen);
+                if (DrawSpan(drawingContext, span, textLength, viewportRect, MatchFillBrush, MatchBorderPen))
+                {
+                    renderedCount++;
+                }
             }
 
             if (selectedSpan is { } active)
@@ -139,7 +160,42 @@ public sealed class RegexMatchHighlightAdorner : Adorner
         }
     }
 
-    private void DrawSpan(
+    private static bool AreAscendingNonOverlapping(IReadOnlyList<TextSpan> spans)
+    {
+        int minNextIndex = 0;
+        for (int i = 0; i < spans.Count; i++)
+        {
+            TextSpan span = spans[i];
+            if (span.Length < 0 || span.Index < minNextIndex)
+            {
+                return false;
+            }
+            minNextIndex = span.Index + span.Length;
+        }
+        return true;
+    }
+
+    private static int FindFirstVisibleCandidate(IReadOnlyList<TextSpan> spans, int visibleStartChar)
+    {
+        int lo = 0;
+        int hi = spans.Count;
+        while (lo < hi)
+        {
+            int mid = lo + ((hi - lo) / 2);
+            TextSpan span = spans[mid];
+            if (span.Index + span.Length < visibleStartChar)
+            {
+                lo = mid + 1;
+            }
+            else
+            {
+                hi = mid;
+            }
+        }
+        return lo;
+    }
+
+    private bool DrawSpan(
         DrawingContext drawingContext,
         TextSpan span,
         int textLength,
@@ -149,7 +205,7 @@ public sealed class RegexMatchHighlightAdorner : Adorner
     {
         if (span.Length <= 0 || span.Index < 0 || span.Index + span.Length > textLength)
         {
-            return;
+            return false;
         }
 
         int startIndex = span.Index;
@@ -160,7 +216,7 @@ public sealed class RegexMatchHighlightAdorner : Adorner
 
         if (startRect.IsEmpty || endRect.IsEmpty)
         {
-            return;
+            return false;
         }
 
         // Fast viewport bounds check: if entirely above or below visible viewport, skip drawing
@@ -168,7 +224,7 @@ public sealed class RegexMatchHighlightAdorner : Adorner
         double spanBottom = Math.Max(startRect.Bottom, endRect.Bottom);
         if (spanBottom < viewportRect.Top || spanTop > viewportRect.Bottom)
         {
-            return;
+            return false;
         }
 
         // Single-line span
@@ -178,8 +234,9 @@ public sealed class RegexMatchHighlightAdorner : Adorner
             if (rect.Width > 0 && rect.Height > 0)
             {
                 drawingContext.DrawRoundedRectangle(fill, pen, rect, 2, 2);
+                return true;
             }
-            return;
+            return false;
         }
 
         // Multi-line span: draw coalesced segments by line
@@ -188,6 +245,7 @@ public sealed class RegexMatchHighlightAdorner : Adorner
 
         if (startLine >= 0 && endLine >= startLine)
         {
+            bool drewAny = false;
             for (int line = startLine; line <= endLine; line++)
             {
                 int lineStartChar = textBox.GetCharacterIndexFromLineIndex(line);
@@ -220,13 +278,15 @@ public sealed class RegexMatchHighlightAdorner : Adorner
                     if (segRect.Width > 0 && segRect.Height > 0 && segRect.IntersectsWith(viewportRect))
                     {
                         drawingContext.DrawRoundedRectangle(fill, pen, segRect, 2, 2);
+                        drewAny = true;
                     }
                 }
             }
-            return;
+            return drewAny;
         }
 
         // Fallback if line indexes are not available
+        bool drewFallback = false;
         Rect currentLineRect = startRect;
         for (int i = startIndex; i < endIndex; i++)
         {
@@ -247,6 +307,7 @@ public sealed class RegexMatchHighlightAdorner : Adorner
                 if (currentLineRect.Width > 0 && currentLineRect.Height > 0 && currentLineRect.IntersectsWith(viewportRect))
                 {
                     drawingContext.DrawRoundedRectangle(fill, pen, currentLineRect, 2, 2);
+                    drewFallback = true;
                 }
                 currentLineRect = charRect;
             }
@@ -255,6 +316,9 @@ public sealed class RegexMatchHighlightAdorner : Adorner
         if (currentLineRect.Width > 0 && currentLineRect.Height > 0 && currentLineRect.IntersectsWith(viewportRect))
         {
             drawingContext.DrawRoundedRectangle(fill, pen, currentLineRect, 2, 2);
+            drewFallback = true;
         }
+
+        return drewFallback;
     }
 }

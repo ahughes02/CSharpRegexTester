@@ -271,7 +271,7 @@
                                   FontFamily="Consolas"
                                   FontSize="13.5"
                                   VirtualizingStackPanel.IsVirtualizing="True"
-                                  VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                  VirtualizingStackPanel.VirtualizationMode="Standard"
                                   SelectedItemChanged="MatchesTreeView_SelectedItemChanged">
                             <TreeView.Resources>
                                 <HierarchicalDataTemplate DataType="{x:Type models:MatchTreeNode}" ItemsSource="{Binding Children}">

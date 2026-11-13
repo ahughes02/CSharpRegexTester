@@ -43,6 +43,39 @@ public class MainWindowAndAdornerTests
         }
     }
 
+    private static void WithIsolatedWindow(AppSettings? seedSettings, Action<MainWindow, string> testAction)
+    {
+        RunOnStaThread(() =>
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), "CSharpRegexTesterTests", Guid.NewGuid().ToString("N"));
+            string configPath = Path.Combine(tempDir, "test_settings.cfg");
+            Directory.CreateDirectory(tempDir);
+
+            try
+            {
+                if (seedSettings is not null)
+                {
+                    SettingsService.Save(seedSettings, configPath);
+                }
+
+                var window = new MainWindow(configPath);
+                window.Measure(new Size(1120, 720));
+                window.Arrange(new Rect(0, 0, 1120, 720));
+                window.UpdateLayout();
+
+                InvokePrivate(window, "MainWindow_Loaded", window, new RoutedEventArgs());
+                testAction(window, configPath);
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, recursive: true);
+                }
+            }
+        });
+    }
+
     private static void WaitWithDispatcher(Task task)
     {
         var frame = new DispatcherFrame();
@@ -100,58 +133,103 @@ public class MainWindowAndAdornerTests
             var drawingGroup = new DrawingGroup();
             using (DrawingContext dc = drawingGroup.Open())
             {
-                MethodInfo? onRender = typeof(RegexMatchHighlightAdorner)
-                    .GetMethod("OnRender", BindingFlags.Instance | BindingFlags.NonPublic);
-                Assert.NotNull(onRender);
-                onRender.Invoke(adorner, [dc]);
+                InvokeOnRender(adorner, dc);
             }
+            Assert.NotEmpty(drawingGroup.Children);
 
-            // Also test empty render branch and small bounds early return
+            // Empty render branch and small bounds early return
             adorner.UpdateHighlights([]);
             using (DrawingContext dc = drawingGroup.Open())
             {
-                MethodInfo? onRender = typeof(RegexMatchHighlightAdorner)
-                    .GetMethod("OnRender", BindingFlags.Instance | BindingFlags.NonPublic);
-                onRender!.Invoke(adorner, [dc]);
+                InvokeOnRender(adorner, dc);
             }
 
             textBox.Measure(new Size(2, 2));
             textBox.Arrange(new Rect(0, 0, 2, 2));
             using (DrawingContext dc = drawingGroup.Open())
             {
-                MethodInfo? onRender = typeof(RegexMatchHighlightAdorner)
-                    .GetMethod("OnRender", BindingFlags.Instance | BindingFlags.NonPublic);
-                onRender!.Invoke(adorner, [dc]);
+                InvokeOnRender(adorner, dc);
             }
         });
     }
 
     [Fact]
-    public void MainWindow_Workflows_Options_Buttons_Results_And_Persistence_WorkCorrectly()
+    public void RegexMatchHighlightAdorner_RendersMatchesBeyondMaxRenderMatchesWhenScrolledDown()
     {
         RunOnStaThread(() =>
         {
-            // Seed configuration before creating MainWindow
-            SettingsService.Save(new AppSettings
+            // Build 1200 lines ("m\r\n" per line) so match indices 1050..1055 are far past MaxRenderMatches (1000)
+            const int lineCount = 1200;
+            string lineText = "m\r\n";
+            string fullText = string.Concat(Enumerable.Repeat(lineText, lineCount));
+
+            var textBox = new TextBox
             {
-                CurrentExpression = @"(?<word>\w+)",
-                CurrentTestData = "Hello 123",
-                CurrentReplacementText = "[$1]",
-                SelectedOptions = RegexOptions.IgnoreCase | RegexOptions.Multiline,
-                ExpandCaptures = true,
-                ExpandGroups = true,
-                TimeoutSeconds = 5.0,
-                ExpressionList = [@"(?<word>\w+)", @"\d+"]
-            });
+                Width = 300,
+                Height = 120,
+                AcceptsReturn = true,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Text = fullText
+            };
+            textBox.ApplyTemplate();
+            textBox.Measure(new Size(300, 120));
+            textBox.Arrange(new Rect(0, 0, 300, 120));
+            textBox.UpdateLayout();
 
-            var window = new MainWindow();
-            window.Measure(new Size(1120, 720));
-            window.Arrange(new Rect(0, 0, 1120, 720));
-            window.UpdateLayout();
+            // Scroll near line 1100
+            textBox.ScrollToLine(1100);
+            textBox.UpdateLayout();
 
-            // Invoke MainWindow_Loaded
-            InvokePrivate(window, "MainWindow_Loaded", window, new RoutedEventArgs());
+            var spans = new List<TextSpan>(lineCount);
+            for (int i = 0; i < lineCount; i++)
+            {
+                spans.Add(new TextSpan(i * lineText.Length, 1));
+            }
 
+            var adorner = new RegexMatchHighlightAdorner(
+                textBox,
+                (charIndex, trailing) =>
+                {
+                    int line = charIndex / lineText.Length;
+                    int firstVisible = Math.Max(0, textBox.GetFirstVisibleLineIndex());
+                    if (line < firstVisible || line > firstVisible + 8)
+                    {
+                        return new Rect(0, (line - firstVisible) * 20, 8, 16);
+                    }
+                    double x = (charIndex % lineText.Length) * 8 + (trailing ? 8 : 0);
+                    return new Rect(x, (line - firstVisible) * 20, 1, 16);
+                });
+            adorner.Measure(new Size(300, 120));
+            adorner.Arrange(new Rect(0, 0, 300, 120));
+            adorner.UpdateHighlights(spans);
+
+            var drawingGroup = new DrawingGroup();
+            using (DrawingContext dc = drawingGroup.Open())
+            {
+                InvokeOnRender(adorner, dc);
+            }
+
+            Assert.NotEmpty(drawingGroup.Children);
+        });
+    }
+
+    [Fact]
+    public void MainWindow_LoadsSeededSettings_And_ValidatesTimeoutEdgeCases()
+    {
+        var seed = new AppSettings
+        {
+            CurrentExpression = @"(?<word>\w+)",
+            CurrentTestData = "Hello 123",
+            CurrentReplacementText = "[$1]",
+            SelectedOptions = RegexOptions.IgnoreCase | RegexOptions.Multiline,
+            ExpandCaptures = true,
+            ExpandGroups = true,
+            TimeoutSeconds = 5.0,
+            ExpressionList = [@"(?<word>\w+)", @"\d+"]
+        };
+
+        WithIsolatedWindow(seed, (window, _configPath) =>
+        {
             Assert.Equal(@"(?<word>\w+)", window.ExpressionTextBox.Text);
             Assert.Equal("Hello 123", window.DataTextBox.Text);
             Assert.True(window.IgnoreCaseCheckBox.IsChecked);
@@ -159,36 +237,78 @@ public class MainWindowAndAdornerTests
             Assert.Equal("5", window.TimeoutComboBox.Text);
             Assert.Equal(TimeSpan.FromSeconds(5), window.GetConfiguredTimeout());
 
-            // Test GetConfiguredTimeout parsing edge cases
             window.TimeoutComboBox.Text = "10";
             Assert.Equal(TimeSpan.FromSeconds(10), window.GetConfiguredTimeout());
             window.TimeoutComboBox.Text = "0.5";
             Assert.Equal(TimeSpan.FromSeconds(0.5), window.GetConfiguredTimeout());
+
             window.TimeoutComboBox.Text = "invalid";
             Assert.Equal(RegexEvaluatorService.DefaultTimeout, window.GetConfiguredTimeout());
+            Assert.False(window.TryGetConfiguredTimeout(out TimeSpan _));
+
             window.TimeoutComboBox.Text = "-1";
             Assert.Equal(RegexEvaluatorService.DefaultTimeout, window.GetConfiguredTimeout());
+
             window.TimeoutComboBox.Text = "999";
             Assert.Equal(RegexEvaluatorService.DefaultTimeout, window.GetConfiguredTimeout());
+
             window.TimeoutComboBox.Text = "";
             window.TimeoutComboBox.SelectedItem = "10";
             Assert.Equal(TimeSpan.FromSeconds(10), window.GetConfiguredTimeout());
+
             window.TimeoutComboBox.SelectedItem = null;
             Assert.Equal(RegexEvaluatorService.DefaultTimeout, window.GetConfiguredTimeout());
+            Assert.True(window.TryGetConfiguredTimeout(out TimeSpan _));
 
-            // Test TimeoutComboBox events
-            InvokePrivate(
-                window,
-                "TimeoutComboBox_SelectionChanged",
-                window.TimeoutComboBox,
-                new SelectionChangedEventArgs(ComboBox.SelectionChangedEvent, Array.Empty<object>(), Array.Empty<object>()));
+            // TimeoutComboBox events apply crimson border when invalid
+            window.TimeoutComboBox.Text = "bad";
             InvokePrivate(
                 window,
                 "TimeoutComboBox_TextChanged",
                 window.TimeoutComboBox,
                 new TextChangedEventArgs(TextBox.TextChangedEvent, UndoAction.None));
+            Assert.Equal(Brushes.Crimson, window.TimeoutComboBox.BorderBrush);
 
-            // Test DisplayResults with matches and non-matching optional groups
+            window.TimeoutComboBox.Text = "2";
+            InvokePrivate(
+                window,
+                "TimeoutComboBox_SelectionChanged",
+                window.TimeoutComboBox,
+                new SelectionChangedEventArgs(ComboBox.SelectionChangedEvent, Array.Empty<object>(), Array.Empty<object>()));
+            Assert.NotEqual(Brushes.Crimson, window.TimeoutComboBox.BorderBrush);
+        });
+    }
+
+    [Fact]
+    public void MainWindow_DisablesIncompatibleRegexOptions()
+    {
+        WithIsolatedWindow(null, (window, _) =>
+        {
+            window.NonBacktrackingCheckBox.IsChecked = true;
+            Assert.False(window.RightToLeftCheckBox.IsEnabled);
+            Assert.False(window.ECMAScriptCheckBox.IsEnabled);
+            Assert.True(window.IgnoreCaseCheckBox.IsEnabled);
+
+            window.NonBacktrackingCheckBox.IsChecked = false;
+            Assert.True(window.RightToLeftCheckBox.IsEnabled);
+            Assert.True(window.ECMAScriptCheckBox.IsEnabled);
+
+            window.ECMAScriptCheckBox.IsChecked = true;
+            Assert.False(window.ExplicitCaptureCheckBox.IsEnabled);
+            Assert.False(window.IgnorePatternWhitespace.IsEnabled);
+            Assert.False(window.RightToLeftCheckBox.IsEnabled);
+            Assert.False(window.SinglelineCheckBox.IsEnabled);
+            Assert.False(window.NonBacktrackingCheckBox.IsEnabled);
+            Assert.True(window.IgnoreCaseCheckBox.IsEnabled);
+            Assert.True(window.MultilineCheckBox.IsEnabled);
+        });
+    }
+
+    [Fact]
+    public void MainWindow_DisplaysResults_Selection_TreeExpansion_And_Errors()
+    {
+        WithIsolatedWindow(null, (window, _) =>
+        {
             RegexEvaluationResult matchResult = RegexEvaluatorService.Evaluate(
                 @"(?<word>[A-Za-z]+)|(?<num>\d+)",
                 "Hello 123",
@@ -201,22 +321,15 @@ public class MainWindowAndAdornerTests
             Assert.Equal("Matches (2)", rootItem.Header);
             Assert.Equal("[Hello] [123]", window.ReplacementResultsTextBox.Text);
 
-            // Test DisplayResults exceeding MaxTreeMatches and MaxSplitDisplayItems
-            var manyMatches = new List<MatchSnapshot>();
-            for (int m = 0; m < 1005; m++)
-            {
-                manyMatches.Add(new MatchSnapshot(m, 1, "x", [], []));
-            }
-            var manySplits = new List<string>();
-            for (int s = 0; s < 1005; s++)
-            {
-                manySplits.Add("item");
-            }
+            // Large match set truncation
+            var manyMatches = Enumerable.Range(0, 1005).Select(m => new MatchSnapshot(m, 1, "x", [], [])).ToList();
+            var manySplits = Enumerable.Range(0, 1005).Select(_ => "item").ToList();
             var largeResult = new RegexEvaluationResult(manyMatches, "replaced", manySplits, TimeSpan.FromMilliseconds(10));
             InvokePrivate(window, "DisplayResults", largeResult);
             Assert.Contains("showing first", ((MatchTreeNode)window.MatchesTreeView.Items[0]).Header);
 
-            // Select a match MatchTreeNode to trigger MatchesTreeView_SelectedItemChanged
+            // Selecting match node vs root node without span
+            window.DataTextBox.Text = "Hello 123";
             var firstMatchItem = rootItem.Children[0];
             InvokePrivate(
                 window,
@@ -225,161 +338,149 @@ public class MainWindowAndAdornerTests
                 new RoutedPropertyChangedEventArgs<object>(null!, firstMatchItem));
             Assert.Contains("Selected span:", window.StatusTextBlock.Text);
 
-            // Select an item without a TextSpan
             InvokePrivate(
                 window,
                 "MatchesTreeView_SelectedItemChanged",
                 window.MatchesTreeView,
                 new RoutedPropertyChangedEventArgs<object>(firstMatchItem, rootItem));
 
-            // Test DisplayResults with 1 match (singular "1 match" branch) and ExpandCaptures/ExpandGroups = false
+            // Single match + in-place expansion toggles
             window.ExpandCapturesCheckBox.IsChecked = false;
             window.ExpandGroupsCheckBox.IsChecked = false;
-            RegexEvaluationResult singleMatchResult = RegexEvaluatorService.Evaluate(
-                @"Hello",
-                "Hello 123",
-                "Hi",
-                RegexOptions.None);
+            RegexEvaluationResult singleMatchResult = RegexEvaluatorService.Evaluate(@"Hello", "Hello 123", "Hi", RegexOptions.None);
             InvokePrivate(window, "DisplayResults", singleMatchResult);
             Assert.Contains("1 match", window.MatchSummaryTextBlock.Text);
 
-            // Test in-place tree expansion toggle via ExpandCapturesCheckBox and ExpandGroupsCheckBox
             window.ExpandCapturesCheckBox.IsChecked = true;
-            InvokePrivate(window, "Checkbox_CheckChanged", window.ExpandCapturesCheckBox, new RoutedEventArgs());
             window.ExpandGroupsCheckBox.IsChecked = true;
-            InvokePrivate(window, "Checkbox_CheckChanged", window.ExpandGroupsCheckBox, new RoutedEventArgs());
+            var refreshedRoot = Assert.IsType<MatchTreeNode>(window.MatchesTreeView.Items[0]);
+            Assert.True(refreshedRoot.Children[0].Children[0].IsExpanded);
+            Assert.True(refreshedRoot.Children[0].Children[1].IsExpanded);
 
-            // Test DisplayResults with 0 matches
-            RegexEvaluationResult emptyResult = RegexEvaluatorService.Evaluate(
-                @"999",
-                "Hello 123",
-                "",
-                RegexOptions.None);
+            // Zero matches
+            RegexEvaluationResult emptyResult = RegexEvaluatorService.Evaluate(@"999", "Hello 123", "", RegexOptions.None);
             InvokePrivate(window, "DisplayResults", emptyResult);
             Assert.Equal("No Matches", ((MatchTreeNode)window.MatchesTreeView.Items[0]).Header);
 
-            // Test Checkbox_CheckChanged when stopWork is false
-            InvokePrivate(window, "Checkbox_CheckChanged", window.IgnoreCaseCheckBox, new RoutedEventArgs());
+            // Timeout & syntax exceptions
+            InvokePrivate(window, "DisplayTimeoutException", new RegexMatchTimeoutException("Hello", @"\w+", TimeSpan.FromSeconds(2)));
+            Assert.Equal("Timed out", window.MatchSummaryTextBlock.Text);
 
-            // Test RegexCharacterButton_Click edge cases (non-button source, button with Content only, empty button)
+            InvokePrivate(window, "DisplayException", new ArgumentException("Invalid pattern"));
+            Assert.Equal("Invalid Pattern", window.MatchSummaryTextBlock.Text);
+
+            // Empty tree update branch
+            window.MatchesTreeView.ItemsSource = null;
+            InvokePrivate(window, "UpdateTreeExpansionInPlace");
+        });
+    }
+
+    [Fact]
+    public void MainWindow_QuickInsert_SavedPatterns_Copy_And_ClearAll()
+    {
+        WithIsolatedWindow(null, (window, configPath) =>
+        {
+            // Quick-Insert wrapping
+            window.ExpressionTextBox.Text = "abc";
+            window.ExpressionTextBox.SelectionStart = 0;
+            window.ExpressionTextBox.SelectionLength = 3;
+            InvokePrivate(window, "RegexCharacterButton_Click", window.GroupButton, new RoutedEventArgs(Button.ClickEvent, window.GroupButton));
+            Assert.Equal("(abc)", window.ExpressionTextBox.Text);
+
+            // Edge cases for RegexCharacterButton_Click
             InvokePrivate(window, "RegexCharacterButton_Click", window, new RoutedEventArgs(Button.ClickEvent, window));
             var contentOnlyButton = new Button { Content = @"\w" };
             InvokePrivate(window, "RegexCharacterButton_Click", contentOnlyButton, new RoutedEventArgs(Button.ClickEvent, contentOnlyButton));
             var emptyButton = new Button();
             InvokePrivate(window, "RegexCharacterButton_Click", emptyButton, new RoutedEventArgs(Button.ClickEvent, emptyButton));
 
-            // Test DisplayTimeoutException & DisplayException
-            InvokePrivate(
-                window,
-                "DisplayTimeoutException",
-                new RegexMatchTimeoutException("Hello", @"\w+", TimeSpan.FromSeconds(2)));
-            Assert.Equal("Timed out", window.MatchSummaryTextBlock.Text);
-
-            InvokePrivate(
-                window,
-                "DisplayException",
-                new ArgumentException("Invalid pattern"));
-            Assert.Equal("Invalid Pattern", window.MatchSummaryTextBlock.Text);
-
-            // Test Quick-Insert Button Click
-            window.ExpressionTextBox.Text = "abc";
-            window.ExpressionTextBox.SelectionStart = 0;
-            window.ExpressionTextBox.SelectionLength = 3;
-            InvokePrivate(
-                window,
-                "RegexCharacterButton_Click",
-                window.GroupButton,
-                new RoutedEventArgs(Button.ClickEvent, window.GroupButton));
-            Assert.Equal("(abc)", window.ExpressionTextBox.Text);
-
-            // Test Save & Remove Saved Expression
+            // Save & promote MRU + editing deselects SavedExpressionsComboBox so re-pick works
+            window.ExpressionTextBox.Text = "(abc)";
             InvokePrivate(window, "SaveExpressionButton_Click", window.SaveExpressionButton, new RoutedEventArgs());
             Assert.Equal("(abc)", window.SavedExpressionsComboBox.SelectedItem);
 
-            // Re-saving existing expression promotes to top of MRU
+            window.ExpressionTextBox.Text = "(abc)+";
+            Assert.Null(window.SavedExpressionsComboBox.SelectedItem);
+
+            window.SavedExpressionsComboBox.SelectedItem = "(abc)";
+            Assert.Equal("(abc)", window.ExpressionTextBox.Text);
+
             window.ExpressionTextBox.Text = @"(?<word>\w+)";
             InvokePrivate(window, "SaveExpressionButton_Click", window.SaveExpressionButton, new RoutedEventArgs());
             Assert.Equal(@"(?<word>\w+)", window.SavedExpressionsComboBox.Items[0]);
 
-            InvokePrivate(
-                window,
-                "SavedExpressionsComboBox_SelectionChanged",
-                window.SavedExpressionsComboBox,
-                new SelectionChangedEventArgs(ComboBox.SelectionChangedEvent, Array.Empty<object>(), Array.Empty<object>()));
-
             InvokePrivate(window, "RemoveSavedExpressionButton_Click", window.RemoveSavedExpressionButton, new RoutedEventArgs());
 
-            // Test UpdateTreeExpansionInPlace with empty tree
-            window.MatchesTreeView.ItemsSource = null;
-            InvokePrivate(window, "UpdateTreeExpansionInPlace");
-
-            // Test TimeoutComboBox_TextChanged when stopWork is true
-            FieldInfo? stopWorkField = typeof(MainWindow).GetField("stopWork", BindingFlags.Instance | BindingFlags.NonPublic);
-            stopWorkField?.SetValue(window, true);
-            InvokePrivate(window, "TimeoutComboBox_TextChanged", window.TimeoutComboBox, new TextChangedEventArgs(TextBox.TextChangedEvent, UndoAction.None));
-            stopWorkField?.SetValue(window, false);
-
-            // Test CopyCSharpButton_Click
+            // Copy C# snippet
             InvokePrivate(window, "CopyCSharpButton_Click", window.CopyCSharpButton, new RoutedEventArgs());
             Assert.Contains("[GeneratedRegex", window.CSharpSnippetTextBox.Text);
 
-            // Test ClearAllButton_Click
+            // Clear All clears inputs, snippet, options, and saved selection
+            window.SavedExpressionsComboBox.SelectedItem = "(abc)";
             InvokePrivate(window, "ClearAllButton_Click", window.ClearAllButton, new RoutedEventArgs());
             Assert.Equal(string.Empty, window.ExpressionTextBox.Text);
+            Assert.Equal(string.Empty, window.CSharpSnippetTextBox.Text);
+            Assert.Null(window.SavedExpressionsComboBox.SelectedItem);
             Assert.False(window.IgnoreCaseCheckBox.IsChecked);
             Assert.Equal("2", window.TimeoutComboBox.Text);
 
-            // Test SaveExpressionButton_Click when expression is empty
+            // Save with empty expression warns
             InvokePrivate(window, "SaveExpressionButton_Click", window.SaveExpressionButton, new RoutedEventArgs());
             Assert.Equal("Enter a regular expression before saving.", window.StatusTextBlock.Text);
 
-            // Test async evaluation pipeline (valid, invalid, expression without data, and empty inputs)
+            // Closing persists to isolated path
+            window.ExpressionTextBox.Text = @"\d+";
+            InvokePrivate(window, "Window_Closing", window, new System.ComponentModel.CancelEventArgs());
+            AppSettings? persisted = SettingsService.Load(configPath);
+            Assert.NotNull(persisted);
+            Assert.Equal(@"\d+", persisted.CurrentExpression);
+        });
+    }
+
+    [Fact]
+    public void MainWindow_AsyncPipeline_ClearsStaleSnippetWhenExpressionCleared()
+    {
+        WithIsolatedWindow(null, (window, _) =>
+        {
             window.ExpressionTextBox.Text = @"(?<word>\w+)";
             window.DataTextBox.Text = "Async Test 42";
             WaitWithDispatcher((Task)InvokePrivate(window, "SetupAndRunRegexWorkerAsync")!);
+            Assert.Contains("[GeneratedRegex", window.CSharpSnippetTextBox.Text);
 
-            window.ExpressionTextBox.Text = "[invalid";
-            WaitWithDispatcher((Task)InvokePrivate(window, "SetupAndRunRegexWorkerAsync")!);
-            Assert.Equal("Invalid Pattern", window.MatchSummaryTextBlock.Text);
-
-            window.ExpressionTextBox.Text = @"\d+";
+            // Clearing only DataTextBox keeps C# snippet for the expression
             window.DataTextBox.Text = string.Empty;
             WaitWithDispatcher((Task)InvokePrivate(window, "SetupAndRunRegexWorkerAsync")!);
             Assert.Contains("[GeneratedRegex", window.CSharpSnippetTextBox.Text);
 
+            // Clearing ExpressionTextBox clears stale C# snippet
             window.ExpressionTextBox.Text = string.Empty;
+            window.DataTextBox.Text = "Async Test 42";
             WaitWithDispatcher((Task)InvokePrivate(window, "SetupAndRunRegexWorkerAsync")!);
+            Assert.Equal(string.Empty, window.CSharpSnippetTextBox.Text);
 
-            // Test TextBox_TextChanged and DebounceTimer_Tick
-            window.DataTextBox.Text = "Example";
+            // Invalid regex populates error state + C# snippet
+            window.ExpressionTextBox.Text = "[invalid";
+            WaitWithDispatcher((Task)InvokePrivate(window, "SetupAndRunRegexWorkerAsync")!);
+            Assert.Equal("Invalid Pattern", window.MatchSummaryTextBlock.Text);
+
+            // Invalid timeout appends warning on status bar
+            window.ExpressionTextBox.Text = @"\w+";
+            window.TimeoutComboBox.Text = "bad";
+            WaitWithDispatcher((Task)InvokePrivate(window, "SetupAndRunRegexWorkerAsync")!);
+            Assert.Contains("Invalid timeout", window.StatusTextBlock.Text);
+
+            // DebounceTimer tick & SaveAndExitButton
             InvokePrivate(window, "DebounceTimer_Tick", window, EventArgs.Empty);
-
-            // Test SaveAndExitButton_Click and Window_Closing
             InvokePrivate(window, "SaveAndExitButton_Click", window.SaveAndExitButton, new RoutedEventArgs());
-            InvokePrivate(window, "Window_Closing", window, new System.ComponentModel.CancelEventArgs());
-
-            // Test fresh window load when config file is absent
-            string configPath = SettingsService.AppDataConfigPath;
-            string? backup = null;
-            if (File.Exists(configPath))
-            {
-                backup = File.ReadAllText(configPath);
-                File.Delete(configPath);
-            }
-            try
-            {
-                var freshWindow = new MainWindow();
-                InvokePrivate(freshWindow, "MainWindow_Loaded", freshWindow, new RoutedEventArgs());
-                Assert.Equal("2", freshWindow.TimeoutComboBox.Text);
-            }
-            finally
-            {
-                if (backup is not null)
-                {
-                    File.WriteAllText(configPath, backup);
-                }
-            }
         });
+    }
+
+    private static void InvokeOnRender(RegexMatchHighlightAdorner adorner, DrawingContext dc)
+    {
+        MethodInfo? onRender = typeof(RegexMatchHighlightAdorner)
+            .GetMethod("OnRender", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(onRender);
+        onRender.Invoke(adorner, [dc]);
     }
 
     private static object? InvokePrivate(object target, string methodName, params object[] args)

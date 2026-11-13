@@ -68,22 +68,29 @@ public class SettingsServiceTests
     }
 
     [Fact]
-    public void Save_WithInvalidPath_FallsBackToLocalConfigFile()
+    public void Save_WithInvalidPath_FallsBackToFallbackConfigFile()
     {
         var settings = new AppSettings { CurrentExpression = @"\bword\b" };
         // Invalid path containing null character triggers fallback
         string invalidPath = "invalid\0path.cfg";
+        string fallbackPath = SettingsService.FallbackConfigPath;
+        string? previousFallback = File.Exists(fallbackPath) ? File.ReadAllText(fallbackPath) : null;
 
         try
         {
-            SettingsService.Save(settings, invalidPath);
-            Assert.True(File.Exists(SettingsService.ConfigFileName));
+            bool saved = SettingsService.Save(settings, invalidPath);
+            Assert.True(saved);
+            Assert.True(File.Exists(fallbackPath));
         }
         finally
         {
-            if (File.Exists(SettingsService.ConfigFileName))
+            if (previousFallback is not null)
             {
-                File.Delete(SettingsService.ConfigFileName);
+                File.WriteAllText(fallbackPath, previousFallback);
+            }
+            else if (File.Exists(fallbackPath))
+            {
+                File.Delete(fallbackPath);
             }
         }
     }

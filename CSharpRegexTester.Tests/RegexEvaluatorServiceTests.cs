@@ -102,4 +102,53 @@ public class RegexEvaluatorServiceTests
                 CancellationToken.None,
                 TimeSpan.FromMilliseconds(1)));
     }
+
+    [Fact]
+    public void Evaluate_WithMaxDetailedMatches_PreservesAllSpansWhileSkippingExcessDetailSnapshots()
+    {
+        RegexEvaluationResult result = RegexEvaluatorService.Evaluate(
+            @"(?<ch>\w)",
+            "abcde",
+            null,
+            RegexOptions.None,
+            maxDetailedMatches: 2);
+
+        Assert.Equal(5, result.Matches.Count);
+        Assert.Equal("a", result.Matches[0].Value);
+        Assert.NotEmpty(result.Matches[0].Captures);
+        Assert.NotEmpty(result.Matches[0].Groups);
+
+        Assert.Equal("b", result.Matches[1].Value);
+        Assert.NotEmpty(result.Matches[1].Groups);
+
+        // Matches past maxDetailedMatches retain spans for highlighting while omitting unused detail allocations
+        Assert.Equal(new TextSpan(2, 1), result.Matches[2].Span);
+        Assert.Equal(string.Empty, result.Matches[2].Value);
+        Assert.Empty(result.Matches[2].Captures);
+        Assert.Empty(result.Matches[2].Groups);
+    }
+
+    [Fact]
+    public void GetConflictingOptions_IdentifiesIncompatibleFlagsWithoutDisablingAlreadySelectedFlags()
+    {
+        RegexOptions nonBacktrackingConflicts = RegexEvaluatorService.GetConflictingOptions(RegexOptions.NonBacktracking);
+        Assert.True(nonBacktrackingConflicts.HasFlag(RegexOptions.RightToLeft));
+        Assert.True(nonBacktrackingConflicts.HasFlag(RegexOptions.ECMAScript));
+        Assert.False(nonBacktrackingConflicts.HasFlag(RegexOptions.NonBacktracking));
+
+        RegexOptions ecmascriptConflicts = RegexEvaluatorService.GetConflictingOptions(RegexOptions.ECMAScript);
+        Assert.True(ecmascriptConflicts.HasFlag(RegexOptions.ExplicitCapture));
+        Assert.True(ecmascriptConflicts.HasFlag(RegexOptions.IgnorePatternWhitespace));
+        Assert.True(ecmascriptConflicts.HasFlag(RegexOptions.RightToLeft));
+        Assert.True(ecmascriptConflicts.HasFlag(RegexOptions.Singleline));
+        Assert.True(ecmascriptConflicts.HasFlag(RegexOptions.NonBacktracking));
+        Assert.False(ecmascriptConflicts.HasFlag(RegexOptions.IgnoreCase));
+        Assert.False(ecmascriptConflicts.HasFlag(RegexOptions.Multiline));
+
+        // Pre-existing conflicting selection does not lock itself out so the user can still uncheck it
+        RegexOptions dualSelected = RegexEvaluatorService.GetConflictingOptions(
+            RegexOptions.NonBacktracking | RegexOptions.RightToLeft);
+        Assert.False(dualSelected.HasFlag(RegexOptions.NonBacktracking));
+        Assert.False(dualSelected.HasFlag(RegexOptions.RightToLeft));
+    }
 }

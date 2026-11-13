@@ -11,5 +11,5 @@ public sealed record RegexDisplayModel(
     string ReplacementResults,
     string MatchSummary,
     string StatusMessage,
-    string CSharpSnippet,
+    string? CSharpSnippet,
     RegexEvaluationResult? EvaluationResult = null);

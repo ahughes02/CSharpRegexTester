@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
+using System.Windows.Media;
 using System.Windows.Threading;
 using CSharpRegexTester.Controls;
 using CSharpRegexTester.Models;
@@ -22,13 +23,20 @@ public partial class MainWindow : Window
     private readonly (CheckBox CheckBox, RegexOptions Option)[] optionMappings;
     private readonly List<string> savedExpressions = [];
     private readonly DispatcherTimer debounceTimer;
+    private readonly string? settingsFilePath;
 
     private bool stopWork = true;
     private CancellationTokenSource? regexWorkCts;
     private RegexMatchHighlightAdorner? highlightAdorner;
 
     public MainWindow()
+        : this(null)
     {
+    }
+
+    internal MainWindow(string? settingsFilePath)
+    {
+        this.settingsFilePath = settingsFilePath;
         InitializeComponent();
 
         debounceTimer = new DispatcherTimer
@@ -71,7 +79,7 @@ public partial class MainWindow : Window
     {
         stopWork = true;
         TimeoutComboBox.ItemsSource = new[] { "0.5", "1", "2", "5", "10", "30" };
-        AppSettings? settings = SettingsService.Load();
+        AppSettings? settings = SettingsService.Load(settingsFilePath);
 
         if (settings is not null)
         {
@@ -100,6 +108,8 @@ public partial class MainWindow : Window
         {
             TimeoutComboBox.Text = RegexEvaluatorService.DefaultTimeout.TotalSeconds.ToString(CultureInfo.InvariantCulture);
         }
+        UpdateIncompatibleOptionStates();
+        UpdateTimeoutValidationVisual(TryGetConfiguredTimeout(out _));
         stopWork = false;
     }
 
@@ -111,6 +121,15 @@ public partial class MainWindow : Window
         if (stopWork)
         {
             return;
+        }
+
+        if (ReferenceEquals(sender, ExpressionTextBox) &&
+            SavedExpressionsComboBox.SelectedItem is string selected &&
+            !string.Equals(selected, ExpressionTextBox.Text, StringComparison.Ordinal))
+        {
+            stopWork = true;
+            SavedExpressionsComboBox.SelectedItem = null;
+            stopWork = false;
         }
 
         // Debounce evaluation so pasting large text or typing rapidly does not block the UI.
@@ -142,6 +161,8 @@ public partial class MainWindow : Window
             return;
         }
 
+        UpdateIncompatibleOptionStates();
+        debounceTimer.Stop();
         _ = SetupAndRunRegexWorkerAsync();
     }
 
@@ -152,6 +173,7 @@ public partial class MainWindow : Window
             return;
         }
 
+        UpdateTimeoutValidationVisual(TryGetConfiguredTimeout(out _));
         debounceTimer.Stop();
         debounceTimer.Start();
     }
@@ -163,11 +185,18 @@ public partial class MainWindow : Window
             return;
         }
 
+        UpdateTimeoutValidationVisual(TryGetConfiguredTimeout(out _));
         debounceTimer.Stop();
         debounceTimer.Start();
     }
 
     public TimeSpan GetConfiguredTimeout()
+    {
+        _ = TryGetConfiguredTimeout(out TimeSpan timeout);
+        return timeout;
+    }
+
+    internal bool TryGetConfiguredTimeout(out TimeSpan timeout)
     {
         string? text = TimeoutComboBox?.Text?.Trim();
         if (string.IsNullOrEmpty(text) && TimeoutComboBox?.SelectedItem is string selected)
@@ -175,16 +204,50 @@ public partial class MainWindow : Window
             text = selected.Trim();
         }
 
-        if (double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double seconds) ||
-            double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out seconds))
+        if (string.IsNullOrEmpty(text))
         {
-            if (seconds is >= 0.1 and <= 300.0)
-            {
-                return TimeSpan.FromSeconds(seconds);
-            }
+            timeout = RegexEvaluatorService.DefaultTimeout;
+            return true;
         }
 
-        return RegexEvaluatorService.DefaultTimeout;
+        if ((double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double seconds) ||
+             double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out seconds)) &&
+            seconds is >= 0.1 and <= 300.0)
+        {
+            timeout = TimeSpan.FromSeconds(seconds);
+            return true;
+        }
+
+        timeout = RegexEvaluatorService.DefaultTimeout;
+        return false;
+    }
+
+    private void UpdateTimeoutValidationVisual(bool isValid)
+    {
+        if (TimeoutComboBox is null)
+        {
+            return;
+        }
+
+        if (isValid)
+        {
+            TimeoutComboBox.ClearValue(Control.BorderBrushProperty);
+        }
+        else
+        {
+            TimeoutComboBox.BorderBrush = Brushes.Crimson;
+        }
+    }
+
+    private void UpdateIncompatibleOptionStates()
+    {
+        RegexOptions selected = GetSelectedRegexOptions();
+        RegexOptions conflicting = RegexEvaluatorService.GetConflictingOptions(selected);
+
+        foreach ((CheckBox checkBox, RegexOptions option) in optionMappings)
+        {
+            checkBox.IsEnabled = !conflicting.HasFlag(option);
+        }
     }
 
     private void UpdateTreeExpansionInPlace()
@@ -212,12 +275,14 @@ public partial class MainWindow : Window
         ReplacementResultsTextBox.Text = string.Empty;
 
         ApplyRegexOptionsToCheckBoxes(RegexOptions.None);
+        UpdateIncompatibleOptionStates();
         ExpandCapturesCheckBox.IsChecked = false;
         ExpandGroupsCheckBox.IsChecked = false;
+        SavedExpressionsComboBox.SelectedItem = null;
         TimeoutComboBox.Text = RegexEvaluatorService.DefaultTimeout.TotalSeconds.ToString(CultureInfo.InvariantCulture);
+        UpdateTimeoutValidationVisual(true);
 
         ClearResultsDisplay("Cleared all inputs and options.");
-        CSharpSnippetTextBox.Text = string.Empty;
 
         stopWork = false;
     }
@@ -261,8 +326,9 @@ public partial class MainWindow : Window
         RefreshSavedExpressionsComboBox();
 
         SavedExpressionsComboBox.SelectedItem = expr;
-        SaveConfiguration();
-        StatusTextBlock.Text = "Saved pattern to history.";
+        StatusTextBlock.Text = SaveConfiguration()
+            ? "Saved pattern to history."
+            : "Pattern added in memory, but unable to write configuration file.";
     }
 
     private void RemoveSavedExpressionButton_Click(object sender, RoutedEventArgs e)
@@ -270,8 +336,9 @@ public partial class MainWindow : Window
         if (SavedExpressionsComboBox.SelectedItem is string selected && savedExpressions.Remove(selected))
         {
             RefreshSavedExpressionsComboBox();
-            SaveConfiguration();
-            StatusTextBlock.Text = "Removed pattern from saved list.";
+            StatusTextBlock.Text = SaveConfiguration()
+                ? "Removed pattern from saved list."
+                : "Removed pattern in memory, but unable to write configuration file.";
         }
     }
 
@@ -327,7 +394,7 @@ public partial class MainWindow : Window
         SaveConfiguration();
     }
 
-    private void SaveConfiguration()
+    private bool SaveConfiguration()
     {
         var settings = new AppSettings
         {
@@ -340,7 +407,7 @@ public partial class MainWindow : Window
             TimeoutSeconds = GetConfiguredTimeout().TotalSeconds,
             ExpressionList = [.. savedExpressions]
         };
-        SettingsService.Save(settings);
+        return SettingsService.Save(settings, settingsFilePath);
     }
 
     private RegexOptions GetSelectedRegexOptions()
@@ -370,7 +437,6 @@ public partial class MainWindow : Window
         {
             regexWorkCts = null;
             activeCts.Cancel();
-            activeCts.Dispose();
         }
     }
 
@@ -382,9 +448,6 @@ public partial class MainWindow : Window
         }
 
         CancelPendingEvaluation();
-        var cts = new CancellationTokenSource();
-        regexWorkCts = cts;
-        CancellationToken token = cts.Token;
 
         string expression = ExpressionTextBox.Text;
         string testData = DataTextBox.Text;
@@ -392,17 +455,27 @@ public partial class MainWindow : Window
         RegexOptions options = GetSelectedRegexOptions();
         bool expandCaptures = ExpandCapturesCheckBox.IsChecked == true;
         bool expandGroups = ExpandGroupsCheckBox.IsChecked == true;
-        TimeSpan timeout = GetConfiguredTimeout();
+        bool isTimeoutValid = TryGetConfiguredTimeout(out TimeSpan timeout);
+        UpdateTimeoutValidationVisual(isTimeoutValid);
 
         if (string.IsNullOrEmpty(expression) || string.IsNullOrEmpty(testData))
         {
-            ClearResultsDisplay("Enter both a regular expression and test data to evaluate.");
-            if (!string.IsNullOrEmpty(expression))
+            string snippet = !string.IsNullOrEmpty(expression)
+                ? CSharpCodeGenerator.GenerateSnippet(expression, replacementText, options, timeout)
+                : string.Empty;
+            DisplayResults(RegexPresentationService.CreateEmptyModel(
+                "Enter both a regular expression and test data to evaluate.",
+                snippet));
+            if (!isTimeoutValid)
             {
-                CSharpSnippetTextBox.Text = CSharpCodeGenerator.GenerateSnippet(expression, replacementText, options, timeout);
+                StatusTextBlock.Text += " (Invalid timeout; using 2s default — valid range: 0.1s–300s.)";
             }
             return;
         }
+
+        var cts = new CancellationTokenSource();
+        regexWorkCts = cts;
+        CancellationToken token = cts.Token;
 
         DisplayResults(RegexPresentationService.CreateLoadingModel());
 
@@ -414,7 +487,13 @@ public partial class MainWindow : Window
                 try
                 {
                     RegexEvaluationResult evalResult = RegexEvaluatorService.Evaluate(
-                        expression, testData, replacementText, options, token, timeout);
+                        expression,
+                        testData,
+                        replacementText,
+                        options,
+                        token,
+                        timeout,
+                        RegexPresentationService.MaxTreeMatches);
                     token.ThrowIfCancellationRequested();
                     return RegexPresentationService.BuildModel(
                         evalResult, expression, replacementText, options, expandCaptures, expandGroups, token, timeout);
@@ -435,10 +514,22 @@ public partial class MainWindow : Window
             }
 
             DisplayResults(displayModel);
+            if (!isTimeoutValid)
+            {
+                StatusTextBlock.Text += " (Invalid timeout; using 2s default — valid range: 0.1s–300s.)";
+            }
         }
         catch (OperationCanceledException)
         {
             // Cancelled by a newer input change.
+        }
+        finally
+        {
+            if (ReferenceEquals(regexWorkCts, cts))
+            {
+                regexWorkCts = null;
+            }
+            cts.Dispose();
         }
     }
 
@@ -454,7 +545,7 @@ public partial class MainWindow : Window
         ReplacementResultsTextBox.Text = model.ReplacementResults;
         MatchSummaryTextBlock.Text = model.MatchSummary;
         StatusTextBlock.Text = model.StatusMessage;
-        if (!string.IsNullOrEmpty(model.CSharpSnippet))
+        if (model.CSharpSnippet is not null)
         {
             CSharpSnippetTextBox.Text = model.CSharpSnippet;
         }
@@ -522,10 +613,12 @@ public partial class MainWindow : Window
             return;
         }
 
-        CSharpSnippetTextBox.Text = CSharpCodeGenerator.GenerateSnippet(
-            ExpressionTextBox.Text,
-            ReplacementTextTextBox.Text,
-            GetSelectedRegexOptions(),
-            GetConfiguredTimeout());
+        CSharpSnippetTextBox.Text = string.IsNullOrEmpty(ExpressionTextBox.Text)
+            ? string.Empty
+            : CSharpCodeGenerator.GenerateSnippet(
+                ExpressionTextBox.Text,
+                ReplacementTextTextBox.Text,
+                GetSelectedRegexOptions(),
+                GetConfiguredTimeout());
     }
 }

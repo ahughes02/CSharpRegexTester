@@ -120,6 +120,11 @@ public static class RegexPresentationService
                 }
             }
 
+            if (options.HasFlag(RegexOptions.RightToLeft) && highlightSpans.Count > 1)
+            {
+                highlightSpans.Reverse();
+            }
+
             if (result.Matches.Count > MaxTreeMatches)
             {
                 matchNodes.Add(new MatchTreeNode(
@@ -221,7 +226,7 @@ public static class RegexPresentationService
             CSharpSnippet: snippet);
     }
 
-    public static RegexDisplayModel CreateEmptyModel(string statusMessage)
+    public static RegexDisplayModel CreateEmptyModel(string statusMessage, string? csharpSnippet = "")
     {
         return new RegexDisplayModel(
             TreeNodes: [],
@@ -230,7 +235,7 @@ public static class RegexPresentationService
             ReplacementResults: string.Empty,
             MatchSummary: string.Empty,
             StatusMessage: statusMessage,
-            CSharpSnippet: string.Empty);
+            CSharpSnippet: csharpSnippet);
     }
 
     public static RegexDisplayModel CreateLoadingModel()
@@ -242,7 +247,7 @@ public static class RegexPresentationService
             ReplacementResults: string.Empty,
             MatchSummary: string.Empty,
             StatusMessage: "Evaluating regular expression...",
-            CSharpSnippet: string.Empty);
+            CSharpSnippet: null);
     }
 
     public static void UpdateExpansion(
